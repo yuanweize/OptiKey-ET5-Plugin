@@ -163,7 +163,7 @@ namespace OptiKey.ET5.Plugin.Runtime
             }
         }
 
-        public tobii_error_t WaitForCallbacks(int timeoutMs = 250)
+        public tobii_error_t WaitForCallbacks()
         {
             IntPtr dev;
             lock (syncLock)
@@ -197,15 +197,6 @@ namespace OptiKey.ET5.Plugin.Runtime
 
         public bool TryGetDeviceInfo(out tobii_device_info_t info)
         {
-            lock (syncLock)
-            {
-                if (deviceContext != IntPtr.Zero)
-                {
-                    lastError = binding.GetDeviceInfo(deviceContext, out info);
-                    return lastError == tobii_error_t.TOBII_ERROR_NO_ERROR;
-                }
-            }
-
             info = default(tobii_device_info_t);
             return false;
         }

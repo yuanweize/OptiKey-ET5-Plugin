@@ -131,9 +131,6 @@ namespace OptiKey.ET5.Plugin.Runtime
         private delegate tobii_error_t tobii_gaze_point_unsubscribe_delegate(IntPtr device);
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate tobii_error_t tobii_get_device_info_delegate(IntPtr device, out tobii_device_info_t device_info);
-
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate IntPtr tobii_error_message_delegate(tobii_error_t error);
 
         private tobii_api_create_delegate fn_tobii_api_create;
@@ -146,7 +143,6 @@ namespace OptiKey.ET5.Plugin.Runtime
         private tobii_device_process_callbacks_delegate fn_tobii_device_process_callbacks;
         private tobii_gaze_point_subscribe_delegate fn_tobii_gaze_point_subscribe;
         private tobii_gaze_point_unsubscribe_delegate fn_tobii_gaze_point_unsubscribe;
-        private tobii_get_device_info_delegate fn_tobii_get_device_info;
         private tobii_error_message_delegate fn_tobii_error_message;
 
         public bool IsLoaded => moduleHandle != IntPtr.Zero;
@@ -184,7 +180,6 @@ namespace OptiKey.ET5.Plugin.Runtime
                 fn_tobii_device_process_callbacks = Bind<tobii_device_process_callbacks_delegate>("tobii_device_process_callbacks");
                 fn_tobii_gaze_point_subscribe = Bind<tobii_gaze_point_subscribe_delegate>("tobii_gaze_point_subscribe");
                 fn_tobii_gaze_point_unsubscribe = Bind<tobii_gaze_point_unsubscribe_delegate>("tobii_gaze_point_unsubscribe");
-                fn_tobii_get_device_info = Bind<tobii_get_device_info_delegate>("tobii_get_device_info");
                 fn_tobii_error_message = Bind<tobii_error_message_delegate>("tobii_error_message");
                 return true;
             }
@@ -273,12 +268,6 @@ namespace OptiKey.ET5.Plugin.Runtime
         {
             EnsureLoaded();
             return fn_tobii_gaze_point_unsubscribe(device);
-        }
-
-        public tobii_error_t GetDeviceInfo(IntPtr device, out tobii_device_info_t info)
-        {
-            EnsureLoaded();
-            return fn_tobii_get_device_info(device, out info);
         }
 
         public string GetErrorMessage(tobii_error_t error)
