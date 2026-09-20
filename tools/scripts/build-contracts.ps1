@@ -42,6 +42,38 @@ try {
         throw "Could not locate Contracts project at: $contractsProj"
     }
 
+    # 1. Restore Contracts NuGet packages (Rx-Core, Rx-Linq, Rx-Interfaces)
+    $contractsPackagesConfig = Join-Path $tempCloneDir "src\JuliusSweetland.OptiKey.Contracts\packages.config"
+    $packagesDir = Join-Path $tempCloneDir "packages"
+    if (Test-Path $contractsPackagesConfig) {
+        Write-Host "Restoring Contracts packages.config to: $packagesDir" -ForegroundColor Cyan
+        nuget restore $contractsPackagesConfig -PackagesDirectory $packagesDir | Out-Null
+    }
+
+    # 2. Ensure .NET 4.6 Reference Assemblies are available (prevent MSB3644)
+    $mscorlibCheck = "${env:ProgramFiles(x86)}\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6\mscorlib.dll"
+    $extraBuildArgs = @()
+
+    if (-not (Test-Path $mscorlibCheck)) {
+        Write-Host "Targeting pack mscorlib.dll not found in Program Files. Installing Reference Assemblies via NuGet..." -ForegroundColor Cyan
+        $refPackageDir = Join-Path $tempCloneDir "packages\ref46"
+        nuget install Microsoft.NETFramework.ReferenceAssemblies.net46 -Version 1.0.3 -OutputDirectory $refPackageDir | Out-Null
+        $resolvedRefPath = Join-Path $refPackageDir "Microsoft.NETFramework.ReferenceAssemblies.net46.1.0.3\build\.NETFramework\v4.6"
+
+        if (Test-Path $resolvedRefPath) {
+            try {
+                $sysTargetDir = "${env:ProgramFiles(x86)}\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6"
+                Write-Host "Deploying reference assemblies to: $sysTargetDir" -ForegroundColor Green
+                New-Item -ItemType Directory -Path $sysTargetDir -Force | Out-Null
+                Copy-Item -Path "$resolvedRefPath\*" -Destination $sysTargetDir -Recurse -Force
+                Write-Host "Successfully deployed reference assemblies." -ForegroundColor Green
+            } catch {
+                Write-Host "System copy failed; passing FrameworkPathOverride instead: $resolvedRefPath" -ForegroundColor Yellow
+                $extraBuildArgs += "/p:FrameworkPathOverride=`"$resolvedRefPath`""
+            }
+        }
+    }
+
     # Locate MSBuild
     $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
     $msbuild = $null
@@ -56,31 +88,8 @@ try {
         $msbuild = "msbuild.exe"
     }
 
-    # Ensure .NET 4.6 Reference Assemblies are available (prevent MSB3644 on newer build agents)
-    $systemRefPath = "${env:ProgramFiles(x86)}\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6"
-    $extraBuildArgs = @()
-
-    if (-not (Test-Path $systemRefPath)) {
-        Write-Host "Targeting pack for .NET 4.6 not present. Downloading Reference Assemblies via NuGet..." -ForegroundColor Yellow
-        $refPackageDir = Join-Path $tempCloneDir "packages\ref46"
-        nuget install Microsoft.NETFramework.ReferenceAssemblies.net46 -Version 1.0.3 -OutputDirectory $refPackageDir | Out-Null
-        $resolvedRefPath = Join-Path $refPackageDir "Microsoft.NETFramework.ReferenceAssemblies.net46.1.0.3\build\.NETFramework\v4.6"
-        
-        if (Test-Path $resolvedRefPath) {
-            try {
-                Write-Host "Deploying reference assemblies to system path: $systemRefPath" -ForegroundColor Cyan
-                New-Item -ItemType Directory -Path $systemRefPath -Force | Out-Null
-                Copy-Item -Path "$resolvedRefPath\*" -Destination $systemRefPath -Recurse -Force
-                Write-Host "Reference assemblies deployed successfully." -ForegroundColor Green
-            } catch {
-                Write-Host "Could not write to Program Files; passing FrameworkPathOverride instead: $resolvedRefPath" -ForegroundColor Yellow
-                $extraBuildArgs += "/p:FrameworkPathOverride=`"$resolvedRefPath`""
-            }
-        }
-    }
-
-    Write-Host "Restoring and building Contracts project using MSBuild..."
-    & $msbuild $contractsProj /p:Configuration=Release /p:Platform=x64 /t:Restore,Rebuild /v:m $extraBuildArgs
+    Write-Host "Building Contracts project using MSBuild..."
+    & $msbuild $contractsProj /p:Configuration=Release /p:Platform=x64 /t:Rebuild /v:m $extraBuildArgs
 
     $builtDll = Join-Path $tempCloneDir "src\JuliusSweetland.OptiKey.Contracts\bin\x64\Release\JuliusSweetland.OptiKey.Contracts.dll"
     if (-not (Test-Path $builtDll)) {
