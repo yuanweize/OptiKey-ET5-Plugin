@@ -2,7 +2,7 @@
 # ===============================================================
 [CmdletBinding()]
 param(
-    [string]$Version = "1.0.0",
+    [string]$Version = "0.0.0-ci",
     [string]$Configuration = "Release",
     [string]$Platform = "x64",
     [string]$OutputDir = "$PSScriptRoot\..\..\artifacts\release"

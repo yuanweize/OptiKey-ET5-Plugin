@@ -9,6 +9,8 @@ jobs:
   release:
     name: Build and Publish Release
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -64,6 +66,9 @@ jobs:
         id: prerelease_check
         shell: pwsh
         run: |
+          if ("${{ github.ref_name }}" -notmatch "^v\d+\.\d+\.\d+-(alpha|beta|rc)(\.\d+)?$") {
+            throw "Stable release tags are blocked until real ET5 hardware validation is complete. Use a prerelease tag such as v0.1.0-alpha.1."
+          }
           $isPrerelease = "${{ github.ref_name }}" -match "-(alpha|beta|rc)"
           echo "is_prerelease=$($isPrerelease.ToString().ToLower())" >> $env:GITHUB_OUTPUT
 

@@ -69,7 +69,7 @@ jobs:
         if: matrix.contracts_target == 'pinned-stable'
         shell: pwsh
         run: |
-          .\tools\scripts\package-release.ps1 -Version "1.0.0"
+          .\tools\scripts\package-release.ps1 -Version "0.0.0-ci.${{ github.run_number }}"
 
       - name: Upload Release Artifacts
         if: matrix.contracts_target == 'pinned-stable'

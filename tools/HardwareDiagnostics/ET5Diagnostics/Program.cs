@@ -123,7 +123,7 @@ namespace OptiKey.ET5.Diagnostics
                 var stopwatch = Stopwatch.StartNew();
                 while (stopwatch.ElapsedMilliseconds < 5000)
                 {
-                    runtime.WaitForCallbacks(timeoutMs: 100);
+                    runtime.WaitForCallbacks();
                     runtime.ProcessCallbacks();
                 }
                 stopwatch.Stop();

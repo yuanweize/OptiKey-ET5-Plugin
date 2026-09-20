@@ -76,6 +76,9 @@ try {
     if (-not $mainPluginDll) {
         throw "Release ZIP verification failed: 'OptiKey.ET5.Plugin.dll' not found in package!"
     }
+    if (@($mainPluginDll).Count -ne 1) {
+        throw "Release ZIP verification failed: expected exactly one 'OptiKey.ET5.Plugin.dll', found $(@($mainPluginDll).Count)."
+    }
 
     # Verify no test or synthetic assemblies slipped through
     $testDlls = $extractedDlls | Where-Object { $_.Name -match "(Tests|Synthetic)" }
