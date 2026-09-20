@@ -2,10 +2,11 @@ name: Windows CI & Compatibility Matrix
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ main, dev, audit/hardening-2026-09 ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build-and-test:
