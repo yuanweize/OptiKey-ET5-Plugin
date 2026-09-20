@@ -57,17 +57,25 @@ try {
     }
 
     # Ensure .NET 4.6 Reference Assemblies are available (prevent MSB3644 on newer build agents)
-    $frameworkPath = "${env:ProgramFiles(x86)}\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6"
+    $systemRefPath = "${env:ProgramFiles(x86)}\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6"
     $extraBuildArgs = @()
 
-    if (-not (Test-Path $frameworkPath)) {
-        Write-Host "Targeting pack for .NET 4.6 not detected in Program Files. Acquiring reference assemblies via NuGet..." -ForegroundColor Yellow
+    if (-not (Test-Path $systemRefPath)) {
+        Write-Host "Targeting pack for .NET 4.6 not present. Downloading Reference Assemblies via NuGet..." -ForegroundColor Yellow
         $refPackageDir = Join-Path $tempCloneDir "packages\ref46"
         nuget install Microsoft.NETFramework.ReferenceAssemblies.net46 -Version 1.0.3 -OutputDirectory $refPackageDir | Out-Null
         $resolvedRefPath = Join-Path $refPackageDir "Microsoft.NETFramework.ReferenceAssemblies.net46.1.0.3\build\.NETFramework\v4.6"
+        
         if (Test-Path $resolvedRefPath) {
-            Write-Host "Using NuGet Reference Assemblies path: $resolvedRefPath" -ForegroundColor Green
-            $extraBuildArgs += "/p:FrameworkPathOverride=$resolvedRefPath"
+            try {
+                Write-Host "Deploying reference assemblies to system path: $systemRefPath" -ForegroundColor Cyan
+                New-Item -ItemType Directory -Path $systemRefPath -Force | Out-Null
+                Copy-Item -Path "$resolvedRefPath\*" -Destination $systemRefPath -Recurse -Force
+                Write-Host "Reference assemblies deployed successfully." -ForegroundColor Green
+            } catch {
+                Write-Host "Could not write to Program Files; passing FrameworkPathOverride instead: $resolvedRefPath" -ForegroundColor Yellow
+                $extraBuildArgs += "/p:FrameworkPathOverride=`"$resolvedRefPath`""
+            }
         }
     }
 
