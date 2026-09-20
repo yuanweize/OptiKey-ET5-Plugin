@@ -2,7 +2,7 @@
 
 ## Phase 1: Repository Infrastructure & Architecture (Current)
 - [x] GitHub repository setup with official `optikey-plugin` topics.
-- [x] GPL-3.0 License, Security, Privacy, and Code of Conduct policies.
+- [x] GPL-3.0-only License, Security, Privacy, and Code of Conduct policies.
 - [x] Upstream contract reference pinning (`OPTIKEY_CONTRACT_REF`).
 - [x] Comprehensive Architectural Decision Records (ADR-001 through ADR-007).
 - [x] Legal notice (`LEGAL.md`) and runtime research deliverable (`docs/RUNTIME_RESEARCH.md`).
@@ -32,7 +32,7 @@
 - [x] Automated SHA256 checksum generation.
 
 ## Phase 6: Hardware Testing & Release Gates
-- [ ] Community Alpha Release (`v1.0.0-alpha.1`) as GitHub Pre-release.
+- [ ] Community Alpha Release (`v0.1.0-alpha.1`) as GitHub Pre-release, only after ABI and shutdown gates pass.
 - [ ] Physical ET5 validation across Windows 10/11 physical machines.
 - [ ] 30-minute and 2-hour soak testing on live hardware.
 - [ ] Promote to official General Availability release (`v1.0.0`) once hardware validation sign-off is complete.

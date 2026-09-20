@@ -1,7 +1,7 @@
 # OptiKey-ET5-Plugin
 
 [![Windows CI](https://github.com/yuanweize/OptiKey-ET5-Plugin/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/yuanweize/OptiKey-ET5-Plugin/actions/workflows/build-and-test.yml)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![License: GPL-3.0-only](https://img.shields.io/badge/License-GPL--3.0--only-blue.svg)](LICENSE)
 [![OptiKey Compatibility](https://img.shields.io/badge/OptiKey-%3E%3D%204.1.0-brightgreen.svg)](docs/COMPATIBILITY.md)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20x64-lightgrey.svg)](docs/COMPATIBILITY.md)
 
@@ -24,7 +24,7 @@ Launch OptiKey (>= 4.1.0)
          ↓
 Select "Tobii Eye Tracker 5" & Click Install
          ↓
-Works Immediately!
+         Hardware validation pending
 ```
 *End users do not need to hunt for DLL files, configure developer paths, or compile code.*
 
@@ -34,8 +34,8 @@ Works Immediately!
 
 - **Zero Proprietary Binary Redistribution**: Does NOT bundle or redistribute any closed-source Tobii binaries or SDK headers. It safely and dynamically links to the user's legitimately installed local Tobii Experience runtime.
 - **Fail-Safe Parameterless Instantiation**: Conforms strictly to OptiKey's `Activator.CreateInstance` loader requirements. The plugin constructor is completely hardware-independent and never crashes OptiKey.
-- **Resilient Reconnection State Machine**: Automatically recovers from USB disconnects, driver restarts, and PC sleep/wake cycles with jittered exponential backoff.
-- **Pixel-Accurate Coordinate Transformation**: Maps normalized eye-gaze coordinates directly to primary display physical pixels, ensuring accurate hit-testing across 100%, 125%, 150%, and 200% Windows display scaling.
+- **Reconnection State Machine**: Contains reconnect handling for transient runtime failures. Physical disconnect, sleep/resume, and DPI behavior remain unverified.
+- **Coordinate Transformation**: Provides a normalized-to-display mapping tested with synthetic metrics. Physical DPI and multi-monitor behavior remain unverified.
 - **Strict Privacy Guarantees**: Coordinates are processed in volatile memory in real time solely to select keys. Zero local gaze persistence; zero network transmission; zero telemetry.
 - **No Silent Fallback to Simulated Gaze**: If hardware is detached, the plugin cleanly notifies the user. Simulated gaze is isolated in a separate testing package and will never activate in production.
 
@@ -47,7 +47,7 @@ Works Immediately!
 2. **Hardware**: Tobii Eye Tracker 5 mounted to the primary monitor.
 3. **Software**:
    - [Tobii Experience](https://gaming.tobii.com/getstarted/) installed and calibrated.
-   - [OptiKey](https://github.com/OptiKey/OptiKey/releases) version **4.1.0 or newer** (tested on 4.1.1, 4.2.0, 4.2.2).
+   - [OptiKey](https://github.com/OptiKey/OptiKey/releases) version **4.2.2 contract reference**. Other versions are not verified by this repository.
 
 ---
 
@@ -66,7 +66,7 @@ Works Immediately!
 1. Download the latest release package (`OptiKey-ET5-Plugin-v*.zip`) from the [Releases](https://github.com/yuanweize/OptiKey-ET5-Plugin/releases) page.
 2. Extract the archive into:
    ```
-   %LocalAppData%\OptiKey\OptiKey\EyeTrackerPlugins\yuanweize\OptiKey-ET5-Plugin\<version>\
+   %AppData%\OptiKey\OptiKey\EyeTrackerPlugins\yuanweize\OptiKey-ET5-Plugin\<version>\
    ```
 3. In OptiKey Management Console -> Pointing & Selecting -> Eye tracker, choose **Tobii Eye Tracker 5**.
 
@@ -74,7 +74,7 @@ Works Immediately!
 
 ## Diagnostic Utility
 
-If you encounter connection difficulties, a standalone hardware diagnostic tool is provided:
+After the native ABI and shutdown behavior have been validated on real hardware, a standalone diagnostic tool can be used for connection troubleshooting:
 ```powershell
 # Run the PowerShell diagnostic helper
 .\tools\HardwareDiagnostics\diagnose.ps1
@@ -103,5 +103,5 @@ Or run `ET5Diagnostics.exe` directly. It checks runtime detection, x64 architect
 
 ## License
 
-This project is licensed under the **GNU General Public License v3.0** (GPL-3.0). See [LICENSE](LICENSE) for details.
+This project is licensed under the **GNU General Public License v3.0 only** (GPL-3.0-only). See [LICENSE](LICENSE) for details.
 All original code is free and open-source.

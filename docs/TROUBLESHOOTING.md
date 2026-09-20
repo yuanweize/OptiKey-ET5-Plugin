@@ -25,7 +25,7 @@ Before troubleshooting deeper, run the included diagnostic tool:
 - **Cause**: An incorrect DLL was selected, or files are missing from the plugin folder.
 - **Fix**:
   - Verify that `OptiKey.ET5.Plugin.dll` is placed in:
-    `%LocalAppData%\OptiKey\OptiKey\EyeTrackerPlugins\yuanweize\OptiKey-ET5-Plugin\<tag>\`
+    `%AppData%\OptiKey\OptiKey\EyeTrackerPlugins\yuanweize\OptiKey-ET5-Plugin\<tag>\`
   - In OptiKey Management Console -> Pointing & Selecting -> Eye tracker, ensure **Tobii Eye Tracker 5** is selected.
 
 ### 3. Gaze is Inaccurate or Keys Drift Away at Different Screen Positions

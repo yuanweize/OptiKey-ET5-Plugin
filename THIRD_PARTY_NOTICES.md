@@ -4,7 +4,7 @@ This project references and builds upon open-source software and community speci
 
 ## 1. OptiKey
 - **Copyright**: Copyright (c) 2014-2026 Julius Sweetland, OPTIKEY LTD
-- **License**: GNU General Public License v3.0 (GPL-3.0)
+- **License**: GNU General Public License v3.0-only (GPL-3.0-only)
 - **Website**: https://github.com/OptiKey/OptiKey
 - **Usage**: Plugin architecture interfaces (`JuliusSweetland.OptiKey.Contracts.dll`).
 

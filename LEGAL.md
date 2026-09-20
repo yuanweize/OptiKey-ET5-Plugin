@@ -9,7 +9,7 @@
 ## 1. Verified Facts (VERIFIED FACT)
 
 1. **OptiKey Core Licensing**:
-   OptiKey is licensed under the GNU General Public License v3.0 (GPL-3.0). All original code developed for `OptiKey-ET5-Plugin` is similarly distributed under GPL-3.0.
+   OptiKey is licensed under the GNU General Public License v3.0 (the upstream license terms must be checked independently). All original code developed for `OptiKey-ET5-Plugin` is distributed under GPL-3.0-only.
 2. **Historical Context of Tobii Support in OptiKey**:
    Upstream OptiKey previously included built-in Tobii Dynavox support. In git commit `81c88f5a96ac91ac0283357646a4a4bbe3848f84` (July 2023), the OptiKey maintainers removed Tobii support because the repository directly bundled `tobii_stream_engine.dll` and Tobii's Limited Software Development License Agreement (`SoftwareDevelopmentLicenseAgreement_Limited_en.pdf`), which prohibited redistribution within third-party open-source code packages.
 3. **Zero Proprietary Binary Redistribution**:
@@ -28,7 +28,7 @@
 2. **Clean Room Interface Isolation**:
    Because `OptiKey.ET5.Plugin.dll` contains only managed C# code that binds dynamically at runtime via `LoadLibrary` / `GetProcAddress`, the distributed plugin artifact is entirely free of third-party proprietary copyrights.
 3. **OptiKey Contracts Type Boundary**:
-   Compiling against the public contract assembly (`JuliusSweetland.OptiKey.Contracts.dll`) is authorized by OptiKey's open-source GPL-3.0 license and is the officially designated mechanism for external eye-tracker extensions.
+   Compiling against the public contract assembly (`JuliusSweetland.OptiKey.Contracts.dll`) is a technical build dependency. The legal basis for that boundary is not determined by this repository; the plugin's own source is GPL-3.0-only.
 
 ---
 
@@ -52,7 +52,7 @@ Subject: Open Source Accessibility Plugin for OptiKey (Assistive Technology) usi
 
 Dear Tobii Developer Relations and Legal Team,
 
-We are developing an open-source (GPL-3.0) accessibility plugin for OptiKey (https://github.com/OptiKey/OptiKey), a communication and computer-access system used worldwide by individuals with severe physical disabilities, including ALS/MND locked-in users.
+We are developing an open-source (GPL-3.0-only) accessibility plugin for OptiKey (https://github.com/OptiKey/OptiKey), a communication and computer-access system used worldwide by individuals with severe physical disabilities, including ALS/MND locked-in users.
 
 Due to the high cost of specialized medical eye trackers, many individuals with limited financial resources purchase the consumer Tobii Eye Tracker 5 as an affordable eye-gaze communication interface.
 

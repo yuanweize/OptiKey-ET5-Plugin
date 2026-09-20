@@ -3,7 +3,7 @@
 ## Phase 1: 仓库基础设施
 - [x] 创建 GitHub 仓库 `yuanweize/OptiKey-ET5-Plugin`
 - [x] 设置 topics: `optikey-plugin`, `optikey`, `tobii`, `eye-tracking`, `accessibility` 等
-- [x] 初始化 .gitignore, LICENSE (GPL-3.0)
+- [x] 初始化 .gitignore, LICENSE (GPL-3.0-only)
 - [x] 创建项目骨架目录结构
 - [x] 创建 ADR-001 到 ADR-007
 - [x] 创建基础文档框架 (LEGAL.md, PRIVACY.md, THIRD_PARTY_NOTICES.md, COMPATIBILITY.md, HARDWARE_VALIDATION.md, TROUBLESHOOTING.md, ROADMAP.md, CHANGELOG.md)
