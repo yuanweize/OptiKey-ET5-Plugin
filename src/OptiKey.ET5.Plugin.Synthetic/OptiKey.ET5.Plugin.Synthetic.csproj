@@ -26,7 +26,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Reactive" Version="4.4.1" />
+    <PackageReference Include="Rx-Core" Version="2.2.5" />
+    <PackageReference Include="Rx-Interfaces" Version="2.2.5" />
+    <PackageReference Include="Rx-Linq" Version="2.2.5" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
   </ItemGroup>
 
