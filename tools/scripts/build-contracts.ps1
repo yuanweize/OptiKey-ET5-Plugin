@@ -56,8 +56,23 @@ try {
         $msbuild = "msbuild.exe"
     }
 
+    # Ensure .NET 4.6 Reference Assemblies are available (prevent MSB3644 on newer build agents)
+    $frameworkPath = "${env:ProgramFiles(x86)}\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6"
+    $extraBuildArgs = @()
+
+    if (-not (Test-Path $frameworkPath)) {
+        Write-Host "Targeting pack for .NET 4.6 not detected in Program Files. Acquiring reference assemblies via NuGet..." -ForegroundColor Yellow
+        $refPackageDir = Join-Path $tempCloneDir "packages\ref46"
+        nuget install Microsoft.NETFramework.ReferenceAssemblies.net46 -Version 1.0.3 -OutputDirectory $refPackageDir | Out-Null
+        $resolvedRefPath = Join-Path $refPackageDir "Microsoft.NETFramework.ReferenceAssemblies.net46.1.0.3\build\.NETFramework\v4.6"
+        if (Test-Path $resolvedRefPath) {
+            Write-Host "Using NuGet Reference Assemblies path: $resolvedRefPath" -ForegroundColor Green
+            $extraBuildArgs += "/p:FrameworkPathOverride=$resolvedRefPath"
+        }
+    }
+
     Write-Host "Restoring and building Contracts project using MSBuild..."
-    & $msbuild $contractsProj /p:Configuration=Release /p:Platform=x64 /t:Restore,Rebuild /v:m
+    & $msbuild $contractsProj /p:Configuration=Release /p:Platform=x64 /t:Restore,Rebuild /v:m $extraBuildArgs
 
     $builtDll = Join-Path $tempCloneDir "src\JuliusSweetland.OptiKey.Contracts\bin\x64\Release\JuliusSweetland.OptiKey.Contracts.dll"
     if (-not (Test-Path $builtDll)) {
