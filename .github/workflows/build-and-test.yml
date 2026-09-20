@@ -73,7 +73,7 @@ jobs:
           .\tools\scripts\package-release.ps1 -Version "0.0.0-ci.${{ github.run_number }}"
 
       - name: Upload Release Artifacts
-        if: matrix.contracts_target == 'pinned-stable'
+        if: always() && matrix.contracts_target == 'pinned-stable'
         uses: actions/upload-artifact@v4
         with:
           name: OptiKey-ET5-Plugin-Package
