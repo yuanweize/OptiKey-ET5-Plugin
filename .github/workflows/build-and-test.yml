@@ -72,6 +72,14 @@ jobs:
         run: |
           .\tools\scripts\package-release.ps1 -Version "0.0.0-ci.${{ github.run_number }}"
 
+      - name: Packaged OptiKey Loader Smoke Test
+        if: matrix.contracts_target == 'pinned-stable'
+        shell: pwsh
+        run: |
+          $zip = (Get-ChildItem -Path artifacts/release -Filter "OptiKey-ET5-Plugin-*.zip" | Select-Object -First 1).FullName
+          $contracts = (Resolve-Path "lib/contracts/JuliusSweetland.OptiKey.Contracts.dll").Path
+          .\tools\scripts\test-packaged-loader.ps1 -ZipPath $zip -ContractsPath $contracts
+
       - name: Upload Release Artifacts
         if: always() && matrix.contracts_target == 'pinned-stable'
         uses: actions/upload-artifact@v4

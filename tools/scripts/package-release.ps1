@@ -64,10 +64,6 @@ try {
     Write-Host "Running release package verification audit..."
     & "$PSScriptRoot\verify-release-zip.ps1" -ZipPath $zipFilePath
 
-    $contractsPath = "$PSScriptRoot\..\..\lib\contracts\JuliusSweetland.OptiKey.Contracts.dll"
-    Write-Host "Running packaged OptiKey loader smoke test..."
-    & "$PSScriptRoot\test-packaged-loader.ps1" -ZipPath $zipFilePath -ContractsPath $contractsPath
-
     # Generate SHA256 checksum
     $hash = (Get-FileHash -Path $zipFilePath -Algorithm SHA256).Hash.ToLower()
     $shaEntry = "$hash  $zipFileName"
