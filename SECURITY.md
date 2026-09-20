@@ -9,7 +9,7 @@
 To safeguard vulnerable assistive technology users:
 1. **No Generic DLL Searching**: The plugin never loads native DLLs from `%PATH%`, the current directory, or `%TEMP%`.
 2. **Strict PE Architecture Verification**: Target libraries must explicitly validate as 64-bit AMD64 PE binaries prior to invoking `LoadLibrary`.
-3. **Authenticode Signature Verification**: Native libraries must bear valid digital signatures from verified vendors.
+3. **Signer Metadata Inspection**: The current implementation rejects files without Tobii signer metadata, but does not yet perform WinVerifyTrust Authenticode integrity and chain validation. This remains a security blocker.
 4. **Clean Parameterless Instantiation**: The plugin constructor executes zero native calls or network operations.
 
 ## Reporting a Vulnerability

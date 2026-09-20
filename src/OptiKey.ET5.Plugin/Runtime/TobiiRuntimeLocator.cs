@@ -11,7 +11,7 @@ namespace OptiKey.ET5.Plugin.Runtime
         public bool IsFound { get; }
         public string LibraryPath { get; }
         public bool IsArchitectureValid { get; }
-        public bool IsSignatureVerified { get; }
+        public bool IsSignerMetadataAccepted { get; }
         public string Publisher { get; }
         public string FailureReason { get; }
 
@@ -26,7 +26,7 @@ namespace OptiKey.ET5.Plugin.Runtime
             IsFound = isFound;
             LibraryPath = libraryPath;
             IsArchitectureValid = isArchValid;
-            IsSignatureVerified = isSigVerified;
+            IsSignerMetadataAccepted = isSigVerified;
             Publisher = publisher;
             FailureReason = failureReason;
         }
@@ -78,20 +78,20 @@ namespace OptiKey.ET5.Plugin.Runtime
                     continue;
                 }
 
-                // 2. Verify Digital Signature
-                bool isSignatureValid = VerifyAuthenticodeSignature(path, out string publisher);
-                if (!isSignatureValid)
+                // 2. Inspect signer metadata; this is not Authenticode trust validation.
+                bool signerMetadataAccepted = InspectSignerMetadata(path, out string publisher);
+                if (!signerMetadataAccepted)
                 {
-                    logger.Warn($"Candidate rejected: Authenticode signature not verified for: {path}");
-                    // In developer or test environments, we log a strong warning but keep checking or handle via policy
+                    logger.Warn($"Candidate rejected: Tobii signer metadata was not accepted for: {path}");
+                    continue;
                 }
 
-                logger.Info($"Successfully located validated Tobii runtime at: {path} (Publisher: {publisher ?? "Unknown"})");
+                logger.Info($"Located Tobii runtime candidate after PE and signer metadata checks: {path} (Publisher: {publisher ?? "Unknown"})");
                 return new RuntimeLocatorResult(
                     isFound: true,
                     libraryPath: path,
                     isArchValid: true,
-                    isSigVerified: isSignatureValid,
+                    isSigVerified: signerMetadataAccepted,
                     publisher: publisher);
             }
 
@@ -158,7 +158,7 @@ namespace OptiKey.ET5.Plugin.Runtime
             }
         }
 
-        public static bool VerifyAuthenticodeSignature(string filePath, out string publisher)
+        public static bool InspectSignerMetadata(string filePath, out string publisher)
         {
             publisher = null;
             try
