@@ -61,7 +61,9 @@ jobs:
       - name: Run Unit & Integration Tests
         shell: pwsh
         run: |
-          vstest.console.exe tests\OptiKey.ET5.Plugin.Tests\bin\x64\Release\OptiKey.ET5.Plugin.Tests.dll /Platform:x64
+          $testDll = (Get-ChildItem -Path tests -Filter "OptiKey.ET5.Plugin.Tests.dll" -Recurse | Where-Object { $_.FullName -match "Release" } | Select-Object -First 1).FullName
+          Write-Host "Executing tests on assembly: $testDll"
+          vstest.console.exe $testDll /Platform:x64
 
       - name: Package Release ZIP & Audit Integrity
         if: matrix.contracts_target == 'pinned-stable'

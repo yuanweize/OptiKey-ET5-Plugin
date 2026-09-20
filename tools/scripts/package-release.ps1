@@ -13,9 +13,15 @@ $ErrorActionPreference = "Stop"
 Write-Host "Packaging OptiKey-ET5-Plugin v$Version ($Configuration | $Platform)..." -ForegroundColor Cyan
 
 $pluginBinDir = "$PSScriptRoot\..\..\src\OptiKey.ET5.Plugin\bin\$Platform\$Configuration"
+if (Test-Path (Join-Path $pluginBinDir "net46")) {
+    $pluginBinDir = Join-Path $pluginBinDir "net46"
+}
+
 if (-not (Test-Path $pluginBinDir)) {
     throw "Compiled plugin directory not found: $pluginBinDir. Please build the project first."
 }
+
+Write-Host "Using plugin binary directory: $pluginBinDir" -ForegroundColor Green
 
 if (-not (Test-Path $OutputDir)) {
     New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
