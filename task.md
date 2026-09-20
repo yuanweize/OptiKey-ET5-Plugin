@@ -19,7 +19,7 @@
 - [x] 实现完整的生命周期管理
 - [x] 核心单元测试 (StateMachine, ReconnectPolicy, CoordinateMapper, Security, Synthetic E2E)
 - [x] OptiKey loader 反射兼容性测试 (精确验证单一 IPointService 实现与无参构造函数)
-- [ ] Windows CI 跑通验证 (进行中)
+- [x] Windows CI 跑通验证 (全绿通过，产物生成并已审计)
 
 ## Phase 3: 核心逻辑完善
 - [x] IReconnectPolicy (指数退避 + 抖动)
