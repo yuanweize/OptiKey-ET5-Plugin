@@ -1,0 +1,33 @@
+# OptiKey Contracts Reference Pinning
+# ====================================
+# This file declares the canonical upstream reference for building and linking
+# JuliusSweetland.OptiKey.Contracts.dll.
+#
+# Rule: Release builds MUST link against the PINNED_COMMIT assembly.
+# CI continuously builds and tests against both PINNED_COMMIT and UPSTREAM_MAIN
+# to detect upstream contract breakages before releases are drafted.
+
+UPSTREAM_REPOSITORY=https://github.com/OptiKey/OptiKey.git
+PINNED_TAG=v4.2.2
+PINNED_COMMIT=ebbbef7bbac5e2dab0e255e5a57acf163d515ca7
+
+# Baseline compatibility verification targets
+COMPATIBILITY_BASELINE_TAG=v4.1.1
+COMPATIBILITY_BASELINE_COMMIT=89a47d667a459abfab05776d2b234ee87bb5123c
+
+# CI ABI matrix
+CI_TEST_AGAINST_PINNED=true
+CI_TEST_AGAINST_MAIN=true
+
+# Contract Assembly Details
+CONTRACT_ASSEMBLY_NAME=JuliusSweetland.OptiKey.Contracts.dll
+CONTRACT_PROJECT_PATH=src/JuliusSweetland.OptiKey.Contracts/JuliusSweetland.OptiKey.Contracts.csproj
+TARGET_FRAMEWORK=net46
+TARGET_PLATFORM=x64
+
+# Canonical Interfaces & Types:
+# - JuliusSweetland.OptiKey.Contracts.IPointService
+# - JuliusSweetland.OptiKey.Contracts.INotifyErrors
+# - System.Reactive.Timestamped<System.Windows.Point>
+# - System.EventHandler<System.Reactive.Timestamped<System.Windows.Point>>
+# - System.EventHandler<System.Exception>

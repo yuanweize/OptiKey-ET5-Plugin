@@ -1,0 +1,79 @@
+name: Windows CI & Compatibility Matrix
+
+on:
+  push:
+    branches: [ main, dev ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: Build & Test (${{ matrix.contracts_target }})
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        contracts_target: [ 'pinned-stable', 'upstream-main' ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Setup VSTest
+        uses: darenm/Setup-VSTest@v1.2
+
+      - name: Determine Upstream Contracts Reference
+        id: contracts-ref
+        shell: pwsh
+        run: |
+          if ("${{ matrix.contracts_target }}" -eq "pinned-stable") {
+            $ref = (Get-Content OPTIKEY_CONTRACT_REF | Where-Object { $_ -match "^PINNED_COMMIT=(.+)$" } | ForEach-Object { $matches[1].Trim() })
+            if (-not $ref) { $ref = "v4.2.2" }
+          } else {
+            $ref = "main"
+          }
+          Write-Host "Resolved Target Ref: $ref"
+          echo "target_ref=$ref" >> $env:GITHUB_OUTPUT
+
+      - name: Build Upstream OptiKey Contracts
+        shell: pwsh
+        run: |
+          .\tools\scripts\build-contracts.ps1 -TargetRef "${{ steps.contracts-ref.outputs.target_ref }}"
+
+      - name: Restore NuGet packages
+        shell: pwsh
+        run: |
+          msbuild OptiKey-ET5-Plugin.sln /p:Configuration=Release /p:Platform=x64 /t:Restore /v:m
+
+      - name: Build Solution (x64 Release)
+        shell: pwsh
+        run: |
+          msbuild OptiKey-ET5-Plugin.sln /p:Configuration=Release /p:Platform=x64 /t:Rebuild /v:m
+
+      - name: Run Unit & Integration Tests
+        shell: pwsh
+        run: |
+          vstest.console.exe tests\OptiKey.ET5.Plugin.Tests\bin\x64\Release\OptiKey.ET5.Plugin.Tests.dll /Platform:x64
+
+      - name: Package Release ZIP & Audit Integrity
+        if: matrix.contracts_target == 'pinned-stable'
+        shell: pwsh
+        run: |
+          .\tools\scripts\package-release.ps1 -Version "1.0.0"
+
+      - name: Upload Release Artifacts
+        if: matrix.contracts_target == 'pinned-stable'
+        uses: actions/upload-artifact@v4
+        with:
+          name: OptiKey-ET5-Plugin-Package
+          path: |
+            artifacts/release/OptiKey-ET5-Plugin-*.zip
+            artifacts/release/SHA256SUMS.txt

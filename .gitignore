@@ -1,0 +1,78 @@
+# OptiKey-ET5-Plugin
+
+## Build artifacts
+bin/
+obj/
+packages/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## NuGet
+[Pp]ackages/
+*.nupkg
+**/[Pp]ackages/**
+!**/[Pp]ackages/build/
+
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+## Visual Studio
+.vs/
+*.rsuser
+*.sln.docstates
+[Tt]est[Rr]esult*/
+[Dd]ebugPS/
+*.pdb
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.log
+*.tlog
+*.lastbuildstate
+*.tmp
+*.tmp_proj
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+## JetBrains
+.idea/
+*.sln.iml
+_ReSharper*/
+
+## macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+## Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+## Output
+artifacts/
+dist/
+out/
+
+## Temporary
+*.swp
+*.bak
+*.orig
+*~

@@ -1,0 +1,75 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Build and Publish Release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Setup VSTest
+        uses: darenm/Setup-VSTest@v1.2
+
+      - name: Determine Upstream Contracts Reference
+        id: contracts-ref
+        shell: pwsh
+        run: |
+          $ref = (Get-Content OPTIKEY_CONTRACT_REF | Where-Object { $_ -match "^PINNED_COMMIT=(.+)$" } | ForEach-Object { $matches[1].Trim() })
+          if (-not $ref) { $ref = "v4.2.2" }
+          echo "target_ref=$ref" >> $env:GITHUB_OUTPUT
+
+      - name: Build Upstream OptiKey Contracts
+        shell: pwsh
+        run: |
+          .\tools\scripts\build-contracts.ps1 -TargetRef "${{ steps.contracts-ref.outputs.target_ref }}"
+
+      - name: Restore NuGet packages
+        shell: pwsh
+        run: |
+          msbuild OptiKey-ET5-Plugin.sln /p:Configuration=Release /p:Platform=x64 /t:Restore /v:m
+
+      - name: Build Solution (x64 Release)
+        shell: pwsh
+        run: |
+          msbuild OptiKey-ET5-Plugin.sln /p:Configuration=Release /p:Platform=x64 /t:Rebuild /v:m
+
+      - name: Run Unit & Integration Tests
+        shell: pwsh
+        run: |
+          vstest.console.exe tests\OptiKey.ET5.Plugin.Tests\bin\x64\Release\OptiKey.ET5.Plugin.Tests.dll /Platform:x64
+
+      - name: Package Release ZIP
+        id: package
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}".TrimStart('v')
+          .\tools\scripts\package-release.ps1 -Version "$tag"
+
+      - name: Determine Pre-release Flag
+        id: prerelease_check
+        shell: pwsh
+        run: |
+          $isPrerelease = "${{ github.ref_name }}" -match "-(alpha|beta|rc)"
+          echo "is_prerelease=$($isPrerelease.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/release/OptiKey-ET5-Plugin-*.zip
+            artifacts/release/SHA256SUMS.txt
+          prerelease: ${{ steps.prerelease_check.outputs.is_prerelease }}
+          generate_release_notes: true
