@@ -5,43 +5,89 @@ using OptiKey.ET5.Plugin.Diagnostics;
 namespace OptiKey.ET5.Plugin.Core
 {
     /// <summary>
-    /// Plugin configuration controlling developer test mode, device selection,
+    /// Callback pump strategy for native Tobii stream event processing.
+    /// </summary>
+    public enum CallbackStrategy
+    {
+        /// <summary>
+        /// Periodic polling using tobii_device_process_callbacks with interruptible wait handle.
+        /// Guaranteed bounded, deterministic shutdown without native thread blocking.
+        /// </summary>
+        Polling = 0,
+
+        /// <summary>
+        /// Classic wait-and-process using blocking tobii_wait_for_callbacks.
+        /// Bounded via thread join timeout with stuck-worker isolation.
+        /// </summary>
+        WaitAndProcess = 1
+    }
+
+    /// <summary>
+    /// Plugin configuration controlling device selection, callback pump strategy,
     /// and runtime behavior. Loaded lazily on first provider Start(), not during
     /// construction, to preserve the parameterless constructor contract.
     ///
     /// Configuration is read from (in priority order):
     /// 1. Environment variable overrides (developer use only)
-    /// 2. Config file at %APPDATA%\OptiKey\OptiKey\ET5Plugin\et5-plugin.config
+    /// 2. Config file at %APPDATA%\OptiKey-ET5-Plugin\et5-plugin.config (primary)
+    ///    or %APPDATA%\OptiKey\OptiKey\ET5Plugin\et5-plugin.config (legacy fallback)
     ///
-    /// Production default: AllowUnverifiedTobiiDevice = false (strict mode).
+    /// Production default:
+    /// - AutomaticDeviceSelection = true (automatically connects if exactly 1 device is detected)
+    /// - Multi-device safety = refuses silent auto-binding if multiple devices are detected
+    /// - CallbackStrategy = Polling (guaranteed bounded shutdown)
     /// </summary>
     public class PluginConfiguration
     {
+        public const string PrimaryConfigDirectory = "OptiKey-ET5-Plugin";
+        public const string ConfigFileName = "et5-plugin.config";
+
         /// <summary>
-        /// When false (default/STRICT MODE), the provider refuses to bind to any
-        /// device whose identity cannot be verified as ET5.
-        /// When true (DEVELOPER TEST MODE), the provider permits controlled testing
-        /// with an explicitly selected unverified device.
+        /// When true (default), automatically selects the target device if exactly
+        /// one Tobii device is enumerated. When multiple devices exist, explicit
+        /// selection is strictly required to prevent accidental connection.
         /// </summary>
-        public bool AllowUnverifiedTobiiDevice { get; set; }
+        public bool AutomaticDeviceSelection { get; set; } = true;
+
+        /// <summary>
+        /// Callback pump strategy. Default is Polling (ProcessOnlyPollingPump)
+        /// for guaranteed bounded, interruptible shutdown.
+        /// </summary>
+        public CallbackStrategy CallbackStrategy { get; set; } = CallbackStrategy.Polling;
+
+        /// <summary>
+        /// Polling interval in milliseconds when using CallbackStrategy.Polling.
+        /// Default is 5ms.
+        /// </summary>
+        public int PollIntervalMs { get; set; } = 5;
 
         /// <summary>
         /// The zero-based local index of the device to use from the current enumeration.
-        /// Only meaningful when AllowUnverifiedTobiiDevice is true.
-        /// If null (default), no device is automatically selected even in developer mode.
+        /// If set, overrides automatic selection.
         /// </summary>
         public int? PreferredDeviceIndex { get; set; }
 
         /// <summary>
         /// Optional explicit device URL. Takes precedence over PreferredDeviceIndex
-        /// if both are set. Only meaningful in developer test mode.
-        /// This value is never written to logs to protect privacy.
+        /// if both are set. This value is never written to logs to protect privacy.
         /// </summary>
         public string PreferredDeviceUrl { get; set; }
 
+        /// <summary>
+        /// Alias for backwards compatibility with developer test scripts.
+        /// Maps directly to AutomaticDeviceSelection.
+        /// </summary>
+        public bool AllowUnverifiedTobiiDevice
+        {
+            get => AutomaticDeviceSelection;
+            set => AutomaticDeviceSelection = value;
+        }
+
         public PluginConfiguration()
         {
-            AllowUnverifiedTobiiDevice = false;
+            AutomaticDeviceSelection = true;
+            CallbackStrategy = CallbackStrategy.Polling;
+            PollIntervalMs = 5;
             PreferredDeviceIndex = null;
             PreferredDeviceUrl = null;
         }
@@ -62,29 +108,16 @@ namespace OptiKey.ET5.Plugin.Core
             LoadFromConfigFile(config, logger);
 
             // Log active configuration state (without sensitive values)
-            if (config.AllowUnverifiedTobiiDevice)
-            {
-                logger.Warn("DEVELOPER TEST MODE is ENABLED. " +
-                    "This is NOT for production use. Device identity is NOT verified.");
+            logger.Debug($"PluginConfiguration loaded: AutoSelect={config.AutomaticDeviceSelection}, " +
+                $"CallbackStrategy={config.CallbackStrategy}, PollInterval={config.PollIntervalMs}ms");
 
-                if (config.PreferredDeviceIndex.HasValue)
-                {
-                    logger.Info($"Developer mode: PreferredDeviceIndex = {config.PreferredDeviceIndex.Value}");
-                }
-                else if (!string.IsNullOrEmpty(config.PreferredDeviceUrl))
-                {
-                    // Log that a URL is configured but NOT the URL itself
-                    logger.Info("Developer mode: explicit device URL is configured.");
-                }
-                else
-                {
-                    logger.Info("Developer mode: no device index or URL configured. " +
-                        "Device selection will fail until one is specified.");
-                }
-            }
-            else
+            if (config.PreferredDeviceIndex.HasValue)
             {
-                logger.Debug("Strict mode active (default). Unverified devices will be refused.");
+                logger.Info($"Configured PreferredDeviceIndex = {config.PreferredDeviceIndex.Value}");
+            }
+            else if (!string.IsNullOrEmpty(config.PreferredDeviceUrl))
+            {
+                logger.Info("Configured explicit PreferredDeviceUrl (redacted for privacy).");
             }
 
             return config;
@@ -94,22 +127,45 @@ namespace OptiKey.ET5.Plugin.Core
         {
             try
             {
-                string devMode = Environment.GetEnvironmentVariable("ET5_ALLOW_UNVERIFIED_DEVICE");
-                if (!string.IsNullOrEmpty(devMode))
+                string autoSelect = Environment.GetEnvironmentVariable("ET5_AUTOMATIC_DEVICE_SELECTION");
+                if (string.IsNullOrEmpty(autoSelect))
                 {
-                    if (devMode.Equals("1", StringComparison.Ordinal) ||
-                        devMode.Equals("true", StringComparison.OrdinalIgnoreCase))
+                    // Fallback to legacy developer mode env var
+                    autoSelect = Environment.GetEnvironmentVariable("ET5_ALLOW_UNVERIFIED_DEVICE");
+                }
+
+                if (!string.IsNullOrEmpty(autoSelect))
+                {
+                    config.AutomaticDeviceSelection =
+                        autoSelect.Equals("1", StringComparison.Ordinal) ||
+                        autoSelect.Equals("true", StringComparison.OrdinalIgnoreCase);
+                    logger.Debug($"ET5_AUTOMATIC_DEVICE_SELECTION set from environment: {config.AutomaticDeviceSelection}");
+                }
+
+                string strategyStr = Environment.GetEnvironmentVariable("ET5_CALLBACK_STRATEGY");
+                if (!string.IsNullOrEmpty(strategyStr))
+                {
+                    if (Enum.TryParse(strategyStr, true, out CallbackStrategy strategy))
                     {
-                        config.AllowUnverifiedTobiiDevice = true;
-                        logger.Warn("ET5_ALLOW_UNVERIFIED_DEVICE environment variable is set.");
+                        config.CallbackStrategy = strategy;
+                        logger.Debug($"ET5_CALLBACK_STRATEGY set from environment: {strategy}");
                     }
                 }
 
+                string pollMsStr = Environment.GetEnvironmentVariable("ET5_POLL_INTERVAL_MS");
+                if (!string.IsNullOrEmpty(pollMsStr) && int.TryParse(pollMsStr, out int pollMs) && pollMs > 0)
+                {
+                    config.PollIntervalMs = pollMs;
+                }
+
                 string indexStr = Environment.GetEnvironmentVariable("ET5_PREFERRED_DEVICE_INDEX");
+                if (string.IsNullOrEmpty(indexStr))
+                {
+                    indexStr = Environment.GetEnvironmentVariable("ET5_SELECTED_DEVICE_INDEX");
+                }
                 if (!string.IsNullOrEmpty(indexStr))
                 {
-                    int idx;
-                    if (int.TryParse(indexStr, out idx) && idx >= 0)
+                    if (int.TryParse(indexStr, out int idx) && idx >= 0)
                     {
                         config.PreferredDeviceIndex = idx;
                     }
@@ -120,6 +176,10 @@ namespace OptiKey.ET5.Plugin.Core
                 }
 
                 string urlStr = Environment.GetEnvironmentVariable("ET5_PREFERRED_DEVICE_URL");
+                if (string.IsNullOrEmpty(urlStr))
+                {
+                    urlStr = Environment.GetEnvironmentVariable("ET5_SELECTED_DEVICE_URL");
+                }
                 if (!string.IsNullOrEmpty(urlStr))
                 {
                     config.PreferredDeviceUrl = urlStr;
@@ -138,16 +198,25 @@ namespace OptiKey.ET5.Plugin.Core
                 string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
                 if (string.IsNullOrEmpty(appData)) return;
 
-                string configPath = Path.Combine(appData, "OptiKey", "OptiKey", "ET5Plugin", "et5-plugin.config");
+                // Primary path: %APPDATA%\OptiKey-ET5-Plugin\et5-plugin.config
+                string configPath = Path.Combine(appData, PrimaryConfigDirectory, ConfigFileName);
                 if (!File.Exists(configPath))
                 {
-                    logger.Debug($"No config file at: {configPath}");
-                    return;
+                    // Fallback to legacy path: %APPDATA%\OptiKey\OptiKey\ET5Plugin\et5-plugin.config
+                    string legacyPath = Path.Combine(appData, "OptiKey", "OptiKey", "ET5Plugin", ConfigFileName);
+                    if (File.Exists(legacyPath))
+                    {
+                        configPath = legacyPath;
+                    }
+                    else
+                    {
+                        logger.Debug($"No config file found at primary or legacy paths.");
+                        return;
+                    }
                 }
 
                 logger.Info($"Reading config from: {configPath}");
 
-                // Simple key=value format, one per line. No complex parsing needed.
                 foreach (string rawLine in File.ReadAllLines(configPath))
                 {
                     string line = rawLine.Trim();
@@ -162,20 +231,32 @@ namespace OptiKey.ET5.Plugin.Core
 
                     switch (key.ToLowerInvariant())
                     {
+                        case "automaticdeviceselection":
                         case "allowunverifiedtobiidevice":
-                            if (!config.AllowUnverifiedTobiiDevice) // env var takes precedence
+                            config.AutomaticDeviceSelection =
+                                value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                                value.Equals("1", StringComparison.Ordinal);
+                            break;
+
+                        case "callbackstrategy":
+                            if (Enum.TryParse(value, true, out CallbackStrategy strat))
                             {
-                                config.AllowUnverifiedTobiiDevice =
-                                    value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-                                    value.Equals("1", StringComparison.Ordinal);
+                                config.CallbackStrategy = strat;
+                            }
+                            break;
+
+                        case "pollintervalms":
+                            if (int.TryParse(value, out int pollMs) && pollMs > 0)
+                            {
+                                config.PollIntervalMs = pollMs;
                             }
                             break;
 
                         case "preferreddeviceindex":
-                            if (!config.PreferredDeviceIndex.HasValue) // env var takes precedence
+                        case "selecteddeviceindex":
+                            if (!config.PreferredDeviceIndex.HasValue)
                             {
-                                int idx;
-                                if (int.TryParse(value, out idx) && idx >= 0)
+                                if (int.TryParse(value, out int idx) && idx >= 0)
                                 {
                                     config.PreferredDeviceIndex = idx;
                                 }
@@ -183,7 +264,8 @@ namespace OptiKey.ET5.Plugin.Core
                             break;
 
                         case "preferreddeviceurl":
-                            if (string.IsNullOrEmpty(config.PreferredDeviceUrl)) // env var takes precedence
+                        case "selecteddeviceurl":
+                            if (string.IsNullOrEmpty(config.PreferredDeviceUrl))
                             {
                                 config.PreferredDeviceUrl = value;
                             }

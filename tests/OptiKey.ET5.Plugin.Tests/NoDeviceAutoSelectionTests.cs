@@ -66,7 +66,7 @@ namespace OptiKey.ET5.Plugin.Tests
 
             var config = new PluginConfiguration
             {
-                AllowUnverifiedTobiiDevice = true,
+                AutomaticDeviceSelection = false, // Explicitly disable auto selection to test manual mode
                 PreferredDeviceIndex = null,
                 PreferredDeviceUrl = null
             };
@@ -79,11 +79,59 @@ namespace OptiKey.ET5.Plugin.Tests
             Thread.Sleep(100);
             provider.Stop();
 
-            Assert.That(fakeRuntime.ConnectedUrl, Is.Null, "Even a single candidate must NOT be automatically selected without explicit config");
+            Assert.That(fakeRuntime.ConnectedUrl, Is.Null, "Single candidate must NOT be automatically selected when AutomaticDeviceSelection is false");
             Assert.That(fakeRuntime.DeviceWasConnected, Is.False);
             Assert.That(errors, Has.Some.TypeOf<ET5PluginException>());
             var identityEx = errors.Find(e => e is ET5PluginException pe && pe.Code == ET5ErrorCode.DeviceIdentityUnknown) as ET5PluginException;
             Assert.That(identityEx, Is.Not.Null);
+        }
+
+        [Test]
+        public void OrdinaryUserMode_SingleDevice_AutoSelectsSoleDevice()
+        {
+            var fakeRuntime = new TrackingFakeRuntime(new[]
+            {
+                "tobii-prx://sole-candidate-device"
+            });
+
+            // Default config: AutomaticDeviceSelection is true
+            var config = new PluginConfiguration();
+
+            var provider = new TobiiGazeProvider(fakeRuntime, configuration: config);
+            provider.Start();
+            Thread.Sleep(100);
+            provider.Stop();
+
+            Assert.That(fakeRuntime.DeviceWasConnected, Is.True);
+            Assert.That(fakeRuntime.ConnectedUrl, Is.EqualTo("tobii-prx://sole-candidate-device"));
+            provider.Dispose();
+        }
+
+        [Test]
+        public void OrdinaryUserMode_MultipleDevices_RefusesAutoSelection()
+        {
+            var fakeRuntime = new TrackingFakeRuntime(new[]
+            {
+                "tobii-prx://device-candidate-0",
+                "tobii-prx://device-candidate-1"
+            });
+
+            // Default config: AutomaticDeviceSelection is true, but multiple candidates exist!
+            var config = new PluginConfiguration();
+
+            var errors = new List<Exception>();
+            var provider = new TobiiGazeProvider(fakeRuntime, configuration: config);
+            provider.ErrorOccurred += (s, e) => errors.Add(e);
+
+            provider.Start();
+            Thread.Sleep(100);
+            provider.Stop();
+
+            // Multi-device safety guard must refuse silent connection to candidate 0
+            Assert.That(fakeRuntime.ConnectedUrl, Is.Null);
+            Assert.That(fakeRuntime.DeviceWasConnected, Is.False);
+            Assert.That(errors, Has.Some.TypeOf<ET5PluginException>());
+            provider.Dispose();
         }
 
         [Test]

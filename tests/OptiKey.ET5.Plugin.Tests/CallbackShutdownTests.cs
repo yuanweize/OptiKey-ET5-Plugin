@@ -256,6 +256,7 @@ namespace OptiKey.ET5.Plugin.Tests
             var devConfig = new PluginConfiguration
             {
                 AllowUnverifiedTobiiDevice = true,
+                CallbackStrategy = CallbackStrategy.WaitAndProcess,
                 PreferredDeviceIndex = 0
             };
 
@@ -335,6 +336,40 @@ namespace OptiKey.ET5.Plugin.Tests
 
             provider.Dispose();
             Assert.That(healthyRuntime.DisposeCalled, Is.True, "Clean disposal must dispose runtime");
+        }
+
+        [Test]
+        public void Provider_WhenDisposedWhileWorkerRunning_DoesNotThrowNullReferenceException()
+        {
+            var unblockEvent = new ManualResetEventSlim(false);
+            var stuckRuntime = new StuckFakeRuntime(unblockEvent);
+            var devConfig = new PluginConfiguration
+            {
+                CallbackStrategy = CallbackStrategy.WaitAndProcess,
+                PreferredDeviceIndex = 0
+            };
+
+            var provider = new TobiiGazeProvider(
+                runtime: stuckRuntime,
+                configuration: devConfig,
+                stopTimeout: TimeSpan.FromMilliseconds(50));
+
+            provider.Start();
+
+            // Wait until connected
+            for (int i = 0; i < 50 && !provider.IsConnected; i++)
+            {
+                Thread.Sleep(10);
+            }
+
+            // Dispose while worker is blocked in WaitForCallbacks
+            provider.Dispose();
+
+            // Unblock worker thread - previously this caused NullReferenceException at WorkerLoop line 221!
+            unblockEvent.Set();
+            Thread.Sleep(50);
+
+            Assert.That(provider.StateMachine.CurrentState, Is.EqualTo(GazeServiceState.Disposed));
         }
 
         #endregion

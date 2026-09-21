@@ -52,7 +52,7 @@ namespace OptiKey.ET5.Plugin.Tests
             var fakeRuntime = new FakeRuntimeWithDevices(new[] { "tobii://device-A" });
             var config = new PluginConfiguration
             {
-                AllowUnverifiedTobiiDevice = true
+                AutomaticDeviceSelection = false
                 // PreferredDeviceIndex is null
                 // PreferredDeviceUrl is null
             };
