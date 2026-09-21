@@ -7,9 +7,15 @@
 
 ---
 
+## 0. 2026-09-21 Current-source correction
+
+Tobii's current [Streams SDK page](https://www.tobii.com/products/integration/tobii-streams-sdk) advertises Stream Engine Client 7.2, requires a development-license subscription, and explicitly states that Eye Tracker 5 without the `L` is a gaming device that cannot be used for development purposes. The same page's developer-guide and API-reference links did not yield a retrievable versioned contract during this review.
+
+Accordingly, the component names, paths, declarations, and lifecycle discussion below are research leads, not proof of a supported ET5 integration. No active declaration may be promoted to hardware-ready status without a legitimately obtained versioned reference and written Tobii clarification for this accessibility use.
+
 ## 1. What Runtime Components Does Tobii Experience Actually Install?
 
-When a consumer or assistive user installs the official **Tobii Experience** application and drivers for the Eye Tracker 5, Windows installs several distinct layers:
+The following component names are historical research leads. They have not been observed on a current ET5 Windows installation in this project:
 
 ### A. Kernel and Device Drivers
 - **Tobii Eye Tracker 5 Driver (`tobii_usb.sys` / `tobii_sensor.sys`)**:
@@ -50,10 +56,10 @@ Rather than relying on `%PATH%` or vulnerable relative paths, the plugin uses a 
 
 ---
 
-## 3. Exact Expected Architecture of `tobii_stream_engine.dll`
+## 3. Current Managed Assumptions for `tobii_stream_engine.dll`
 
-- **Architecture**: `x64` (`AMD64`)
-- **Calling Convention**: `__cdecl` (standard C calling convention for x64 Windows dynamic libraries)
+- **Architecture assumption**: `x64` (`AMD64`)
+- **Calling-convention assumption**: `__cdecl`; not yet matched to the supported 7.2 contract
 - **Subsystem**: Windows C Runtime / Win32
 - **CLR Host Compatibility**: Compatible with .NET Framework 4.6+ compiled with `<PlatformTarget>x64</PlatformTarget>`
 
@@ -61,10 +67,10 @@ Rather than relying on `%PATH%` or vulnerable relative paths, the plugin uses a 
 
 ## 4. Public API Documentation Sources and Provenance
 
-Tobii provides documentation for the Stream Engine C API through:
-- **Tobii Stream Engine Developer Documentation**: `https://developer.tobii.com/consumer-eye-trackers/stream-engine/`
-- **Tobii Stream Engine C Reference Manual**: Versioned releases of Stream Engine headers (`tobii.h`, `tobii_stream_engine.h`) distributed in public developer packages.
-- **Upstream Open-Source References**:
+Current and historical leads:
+- **Current Tobii Streams SDK page**: `https://www.tobii.com/products/integration/tobii-streams-sdk` (advertised client version 7.2; SDK/license access required).
+- **Versioned Stream Engine headers**: required evidence, but not obtained during this review.
+- **Third-party and historical discrepancy references only**:
   - Historical OptiKey commit `cf841c2` and removal diff in `81c88f5`
   - Talisman / Talon accessibility eye-tracking integrations
   - Beam Eye Tracker documentation and public integration examples
@@ -73,7 +79,7 @@ Tobii provides documentation for the Stream Engine C API through:
 
 ## 5. C API Declarations and Minimum Surface Required
 
-To avoid bloat and minimize legal exposure, the plugin binds only the essential C API functions necessary for real-time gaze capture and graceful reconnection. No head pose, user presence, or biometric recording APIs are declared.
+The active binding currently contains the following candidate declarations. They are a minimal surface, but they are not hardware-approved until matched to a legitimately obtained supported header. No head pose, user presence, or biometric recording APIs are declared.
 
 ### Functions:
 1. `tobii_api_create`
@@ -127,7 +133,7 @@ To avoid bloat and minimize legal exposure, the plugin binds only the essential 
 
 ---
 
-## 6. Enum Values and Constants with Public Evidence
+## 6. Managed Enum Values Pending Versioned Proof
 
 ### `tobii_error_t`
 - `TOBII_ERROR_NO_ERROR = 0`
@@ -163,10 +169,10 @@ To avoid bloat and minimize legal exposure, the plugin binds only the essential 
 
 ## 7. What Parts Remain Engineering Inference?
 
-1. **Exact subfolder variations of Tobii Experience installations**:
-   While the standard service directory is `%ProgramFiles%\Tobii\Tobii Service`, certain OEM bundles (e.g., Alienware, Lenovo Legion with integrated eye tracking) or legacy updates might place the DLL in specialized subdirectories. Our multi-path probe list handles this gracefully.
+1. **Exact Tobii Experience installation layout**:
+   All current hard-coded candidates are hypotheses until the inventory script records a real supported installation. The locator must not add guessed paths as facts.
 2. **Tobii Service startup latency after system boot**:
-   Under heavy Windows startup load, `Tobii.Service.exe` may take several seconds to initialize its IPC endpoint. The exponential backoff reconnect policy is specifically engineered to handle this initial connection delay seamlessly.
+   Reconnect timing and service behavior have no current hardware evidence. The managed backoff policy exists, but recovery is unverified.
 
 ---
 
@@ -177,8 +183,9 @@ To avoid bloat and minimize legal exposure, the plugin binds only the essential 
 - Referencing public, documented C function signatures and structs for runtime dynamic linking.
 - Whether the consumer ET5 and current Tobii policies permit this assistive use.
 - Whether the interactive field of use is available for this exact runtime/device combination.
+- Whether any current Tobii agreement permits public open-source AAC/accessibility use with the non-`L` Eye Tracker 5. Current official pages instead create an explicit blocker requiring Tobii clarification.
 
-### Strictly Prohibited & Avoided by this Project:
-- **Zero Redistribution**: We do NOT redistribute `tobii_stream_engine.dll`, `.lib`, `.h`, or any Tobii binaries in git commits or release assets.
+### Project constraints:
+- **Zero Redistribution**: The reviewed Git tree and audited CI package do not redistribute `tobii_stream_engine.dll`, `.lib`, `.h`, or any Tobii binary.
 - **No Reverse Engineering**: We do NOT decompile or crack proprietary Tobii binaries.
 - **No Data Storage or Transmission**: We adhere to the interactive field-of-use contract; no gaze tracking data is recorded, aggregated, or transmitted across the network.

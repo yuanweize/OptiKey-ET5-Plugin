@@ -2,12 +2,12 @@
 
 [![Windows CI](https://github.com/yuanweize/OptiKey-ET5-Plugin/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/yuanweize/OptiKey-ET5-Plugin/actions/workflows/build-and-test.yml)
 [![License: GPL-3.0-only](https://img.shields.io/badge/License-GPL--3.0--only-blue.svg)](LICENSE)
-[![OptiKey Compatibility](https://img.shields.io/badge/OptiKey-%3E%3D%204.1.0-brightgreen.svg)](docs/COMPATIBILITY.md)
+[![Readiness](https://img.shields.io/badge/readiness-NOT%20READY-red.svg)](STATUS.md)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20x64-lightgrey.svg)](docs/COMPATIBILITY.md)
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-An open-source, non-proprietary external eye-tracker plugin that enables **OptiKey 4.x** (>= 4.1.0) to directly use the **Tobii Eye Tracker 5 (ET5)** as an eye-gaze point source.
+An experimental open-source project intended to connect **OptiKey 4.x** to **Tobii Eye Tracker 5 (ET5)**. It is currently **NOT READY** for hardware use or end-user installation.
 
 Designed specifically for individuals with severe motor and speech disabilities (including ALS/MND locked-in users) who depend on eye tracking for daily computer access and communication.
 
@@ -32,19 +32,19 @@ Select "Tobii Eye Tracker 5" & Click Install
 
 ## Key Highlights
 
-- **Zero Proprietary Binary Redistribution**: Does NOT bundle or redistribute any closed-source Tobii binaries or SDK headers. It safely and dynamically links to the user's legitimately installed local Tobii Experience runtime.
-- **Fail-Safe Parameterless Instantiation**: Conforms strictly to OptiKey's `Activator.CreateInstance` loader requirements. The plugin constructor is completely hardware-independent and never crashes OptiKey.
+- **Zero Proprietary Binary Redistribution**: The reviewed source tree and CI package do not bundle Tobii binaries, libraries, headers, or SDK archives.
+- **Hardware-Independent Construction**: The packaged-loader harness confirms that `Activator.CreateInstance` can construct and dispose the point service without loading `tobii_stream_engine.dll`.
 - **Reconnection State Machine**: Contains reconnect handling for transient runtime failures. Physical disconnect, sleep/resume, and DPI behavior remain unverified.
 - **Coordinate Transformation**: Provides a normalized-to-display mapping tested with synthetic metrics. Physical DPI and multi-monitor behavior remain unverified.
 - **Strict Privacy Guarantees**: Coordinates are processed in volatile memory in real time solely to select keys. Zero local gaze persistence; zero network transmission; zero telemetry.
-- **No Silent Fallback to Simulated Gaze**: If hardware is detached, the plugin cleanly notifies the user. Simulated gaze is isolated in a separate testing package and will never activate in production.
+- **No Silent Fallback to Simulated Gaze**: Simulated gaze is isolated in a separate test assembly and is excluded from the audited package.
 
 ---
 
-## Requirements
+## Intended Requirements
 
-1. **Operating System**: Windows 10 x64 (1903+) or Windows 11 x64.
-2. **Hardware**: Tobii Eye Tracker 5 mounted to the primary monitor.
+1. **Operating-system target**: Windows x64; exact supported versions remain unverified for ET5 and the applicable Tobii API.
+2. **Hardware target**: Tobii Eye Tracker 5 mounted to the primary monitor; no physical configuration has been validated.
 3. **Software**:
    - [Tobii Experience](https://gaming.tobii.com/getstarted/) installed and calibrated.
    - [OptiKey](https://github.com/OptiKey/OptiKey/releases) version **4.2.2 contract reference**. Other versions are not verified by this repository.
@@ -53,33 +53,19 @@ Select "Tobii Eye Tracker 5" & Click Install
 
 ## Installation & Usage
 
-### Method A: Automated In-App Installation (Recommended)
-1. Ensure your Tobii Eye Tracker 5 is plugged in and calibrated in **Tobii Experience**.
-2. Start **OptiKey**.
-3. Open the **Management Console** (press `F12` or click the menu button) -> **Pointing & Selecting**.
-4. Set the Pointing source to **Eye tracker**.
-5. Click **Find more eye tracker options online**.
-6. Select **Tobii Eye Tracker 5** (`yuanweize/OptiKey-ET5-Plugin`) and click **Install**.
-7. OptiKey will download the verified plugin package into its plugins folder and immediately begin tracking.
+There is no supported installation yet, no Git tag, and no GitHub Release. The production path intentionally refuses to connect until device identity, ABI, callback shutdown, runtime trust, physical hardware behavior, and Tobii permission are resolved.
 
-### Method B: Manual Installation
-1. Download the latest release package (`OptiKey-ET5-Plugin-v*.zip`) from the [Releases](https://github.com/yuanweize/OptiKey-ET5-Plugin/releases) page.
-2. Extract the archive into:
-   ```
-   %AppData%\OptiKey\OptiKey\EyeTrackerPlugins\yuanweize\OptiKey-ET5-Plugin\<version>\
-   ```
-3. In OptiKey Management Console -> Pointing & Selecting -> Eye tracker, choose **Tobii Eye Tracker 5**.
+The intended future user flow remains: install and calibrate official Tobii software, install OptiKey, find the plugin through OptiKey, select it, and use ET5 as gaze input. That flow is a goal, not current functionality.
 
 ---
 
 ## Diagnostic Utility
 
-After the native ABI and shutdown behavior have been validated on real hardware, a standalone diagnostic tool can be used for connection troubleshooting:
+The current safe inventory script records installation metadata without initializing Tobii or collecting gaze data:
 ```powershell
-# Run the PowerShell diagnostic helper
-.\tools\HardwareDiagnostics\diagnose.ps1
+.\tools\HardwareDiagnostics\inventory-tobii-runtime.ps1
 ```
-Or run `ET5Diagnostics.exe` directly. It checks runtime detection, x64 architecture, driver state, device enumeration, and callback delivery without logging private gaze coordinates.
+The callback-based `ET5Diagnostics.exe` remains fail-closed and is not approved for hardware use.
 
 ---
 

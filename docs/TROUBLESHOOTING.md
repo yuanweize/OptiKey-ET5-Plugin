@@ -1,11 +1,13 @@
 # Troubleshooting Guide
 
+> This project is **NOT READY** for end-user or hardware use. The items below are historical research notes, not validated remedies. Use the inventory-only script until the native and legal blockers are resolved.
+
 ## Quick Diagnostic Checklist
-Before troubleshooting deeper, run the included diagnostic tool:
+For a privacy-bounded installation inventory, run:
 1. Open PowerShell or Command Prompt.
 2. Navigate to the diagnostic tool directory or run:
    ```powershell
-   .\tools\HardwareDiagnostics\diagnose.ps1
+    .\tools\HardwareDiagnostics\inventory-tobii-runtime.ps1
    ```
 3. Check the output summary.
 
@@ -43,6 +45,4 @@ Before troubleshooting deeper, run the included diagnostic tool:
   4. Expand **Device Manager** -> **Universal Serial Bus controllers** -> Right-click Tobii USB Hub -> **Properties** -> **Power Management** -> Uncheck *Allow the computer to turn off this device to save power*.
 
 ### 5. Plugin Log Files
-Plugin runtime logs are appended to:
-`%AppData%\OptiKey\OptiKey\Logs\OptiKey.ET5.Plugin.log`
-Examine this file to review connection timestamps, reconnect attempts, and error codes.
+The plugin currently emits through `System.Diagnostics.TraceSource`. This repository does not configure or verify a specific OptiKey log file destination. Do not claim that a plugin-specific file exists until host logging integration is tested.
