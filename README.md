@@ -5,8 +5,8 @@
 [![Windows CI](https://github.com/yuanweize/OptiKey-ET5-Plugin/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/yuanweize/OptiKey-ET5-Plugin/actions/workflows/build-and-test.yml)
 [![Release](https://img.shields.io/github/v/release/yuanweize/OptiKey-ET5-Plugin?include_prereleases)](https://github.com/yuanweize/OptiKey-ET5-Plugin/releases)
 [![License: GPL-3.0-only](https://img.shields.io/badge/License-GPL--3.0--only-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20x64-lightgrey.svg)](docs/COMPATIBILITY.md)
-[![Privacy: Zero Telemetry](https://img.shields.io/badge/Privacy-Zero%20Telemetry-green.svg)](PRIVACY.md)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20x64-lightgrey.svg)](docs/user/COMPATIBILITY.md)
+[![Privacy: Zero Telemetry](https://img.shields.io/badge/Privacy-Zero%20Telemetry-green.svg)](docs/policies/PRIVACY.md)
 
 Open-source **Tobii Eye Tracker 5 (ET5)** input plugin for **OptiKey 4.x**.
 
@@ -15,31 +15,33 @@ Designed for individuals with ALS/MND, locked-in syndrome, and severe motor disa
 - **Operating System**: Windows 10 / 11 (64-bit)
 - **Host Application**: OptiKey 4.x
 - **Hardware**: Tobii Eye Tracker 5
-- **Zero Bundled Binaries**: Uses the user's locally installed Tobii Experience runtime
-- **Strict Privacy**: Zero telemetry, zero gaze data logging or storage
-- **Clean Architecture**: Interruptible callback pump with bounded shutdown protection
+- **Zero Bundled Binaries**: Seamlessly uses the user's locally installed Tobii Experience runtime
+- **Strict Privacy Invariant**: Real-time memory processing only; zero gaze logging, persistence, or telemetry
+- **Clean Architecture**: Interruptible callback pump with bounded shutdown and stuck-worker isolation
 
 ---
 
 ## Requirements
 
-Before using this plugin, ensure your system has:
+Before using this plugin, ensure your workstation satisfies:
 
 1. **Windows 10 or 11 (x64)**.
 2. **Tobii Eye Tracker 5** connected to your primary display.
-3. **Official Tobii Experience** software installed from [Tobii Gaming](https://gaming.tobii.com/getstarted/) with display setup and user calibration successfully completed.
+3. **Official Tobii Experience** installed from [Tobii Gaming Getting Started](https://gaming.tobii.com/getstarted/) with display setup and user calibration successfully completed.
 4. **OptiKey 4.x** installed from [OptiKey Releases](https://github.com/OptiKey/OptiKey/releases).
+
+For display resolutions, aspect ratios, and DPI scaling information, consult the [Compatibility Guide](docs/user/COMPATIBILITY.md).
 
 ---
 
-## Quick Start & Installation
+## Quick Start
 
-The standard user experience requires zero manual compiling or DLL copying:
+The standard user experience requires zero code compilation or manual DLL copying:
 
-```
+```text
 Install Tobii Experience & Calibrate ET5
                  ↓
-Launch OptiKey -> Open Management Console
+Launch OptiKey -> Open Management Console (Alt + M)
                  ↓
 Navigate to "Pointing & Selecting"
                  ↓
@@ -47,103 +49,52 @@ Click "Find more eye tracker options online"
                  ↓
 Select "Tobii Eye Tracker 5" -> Click Install
                  ↓
-Select as Active Source -> Start Gaze Control
+Select as Pointing Device -> Start Gaze Control
 ```
 
-### Manual Installation (Alternative)
-
-If installing from a released ZIP archive:
-1. Download `OptiKey-ET5-Plugin-v0.1.0.zip` from [GitHub Releases](https://github.com/yuanweize/OptiKey-ET5-Plugin/releases).
-2. Exit OptiKey if it is running.
-3. Extract `OptiKey.ET5.Plugin.dll` into your OptiKey plugins directory:
-   ```text
-   %APPDATA%\OptiKey\OptiKey\Plugins\
-   ```
-4. Start OptiKey.
-
----
-
-## First-Time Setup in OptiKey
-
-1. Press `Alt + M` or click the menu button to open the **Management Console**.
-2. Go to the **Pointing & Selecting** tab.
-3. Set **Pointing device** to:
-   ```text
-   Tobii Eye Tracker 5 (ET5)
-   ```
-4. Click **OK** to save. OptiKey will connect to your Eye Tracker 5 and start tracking your gaze immediately.
-
----
-
-## Multi-Device & Advanced Configuration
-
-For single-tracker setups (the vast majority of users), configuration is entirely automatic: the plugin safely binds to your single calibrated Tobii device.
-
-If you have multiple Tobii devices connected, the plugin strictly refuses silent auto-selection to prevent accidentally controlling the wrong device. In that case, you can configure your preferred device index in:
-
-```text
-%APPDATA%\OptiKey-ET5-Plugin\et5-plugin.config
-```
-
-Example configuration:
-```ini
-# Auto-select if exactly 1 device is detected (default: true)
-AutomaticDeviceSelection=true
-
-# For multi-device setups, select device 0 or 1:
-PreferredDeviceIndex=0
-
-# Callback pump strategy: Polling (default) or WaitAndProcess
-CallbackStrategy=Polling
-```
+For complete offline installation and multi-device configuration steps, see the **[Installation & Setup Guide](docs/user/INSTALLATION.md)**.
 
 ---
 
 ## Troubleshooting
 
-- **Plugin does not appear in OptiKey**:
-  Verify that `OptiKey.ET5.Plugin.dll` is located in `%APPDATA%\OptiKey\OptiKey\Plugins\`.
-- **"Tobii Runtime Not Found" error**:
-  Ensure the official Tobii Experience or Tobii Service is running. Check Windows Services (`services.msc`) to verify `Tobii Service` is Running.
-- **Red "Disconnected" state in OptiKey**:
-  Unplug and reconnect your ET5 USB cable, then re-open OptiKey.
-- **Diagnostic Tool**:
-  If you encounter issues, run `ET5Diagnostics.exe` included with the release to inspect local runtime discovery, signature verification, and device enumeration.
+- **Plugin not found in OptiKey**: Verify that `OptiKey.ET5.Plugin.dll` is located in `%APPDATA%\OptiKey\OptiKey\Plugins\`.
+- **Runtime Not Found**: Ensure official Tobii Experience is installed and the `Tobii Service` is running in `services.msc`.
+- **Red Disconnected State**: Unplug and reconnect the Eye Tracker 5 USB cable, then re-open OptiKey.
+- **Diagnostic Tool**: Run `tools/HardwareDiagnostics/diagnose.ps1` to inspect runtime discovery, PE architecture, and code signatures.
 
-For detailed diagnostic workflows, see the [Troubleshooting Guide](docs/TROUBLESHOOTING.md).
+Detailed diagnostic flows are available in the **[Troubleshooting Guide](docs/user/TROUBLESHOOTING.md)**.
 
 ---
 
-## Privacy & Safety Invariant
+## Privacy & Safety
 
-- **Volatile Processing Only**: Gaze coordinates are processed in real-time memory solely to position the OptiKey pointer and trigger dwell selections.
-- **Zero Storage**: Coordinates, eye images, and device URLs are **never saved to disk or temporary files**.
-- **Zero Telemetry**: No analytics, telemetry, or remote network requests exist in this codebase.
-- **Fail-Safe Isolation**: Native worker threads run bounded shutdown loops to protect OptiKey against unmanaged host crashes.
+- **Volatile Processing**: Gaze coordinates are processed in volatile memory solely to dispatch real-time pointer events.
+- **Zero Storage**: Raw coordinates, eye images, and device URLs are **never saved to disk or transmitted**.
+- **Zero Telemetry**: No analytics or remote network calls exist in this codebase.
+- **Fail-Safe Worker Isolation**: Bounded shutdown loops protect the OptiKey host application from unmanaged crashes.
 
-Review our full [Privacy Policy](PRIVACY.md) and [Security Architecture](SECURITY.md).
-
----
-
-## Support & Contributing
-
-- **Report an Issue**: Open a ticket using our [Issue Templates](https://github.com/yuanweize/OptiKey-ET5-Plugin/issues/new/choose).
-- **Contributing**: Read our [Contributing Guidelines](CONTRIBUTING.md) and [Agent SOP](docs/AGENT_SOP.md).
-- **Documentation Parity**: All documentation is maintained in both English and Simplified Chinese per our [Documentation Policy](docs/DOCUMENTATION_POLICY.md).
+Read our full **[Biometric Privacy Policy](docs/policies/PRIVACY.md)** and **[Security Architecture](.github/SECURITY.md)**.
 
 ---
 
-## Technical & Architecture Documentation
+## Documentation Navigation
 
-For engineers, researchers, and maintainers:
+Comprehensive documentation is organized by audience in our **[Documentation Hub](docs/README.md)**:
 
-- [Architecture Overview (ADR-001)](docs/adr/ADR-001-architecture-overview.md)
-- [Code Audit Report (September 2026)](docs/CODE_AUDIT_2026-09.md)
-- [Tobii Runtime Isolation & Security (ADR-004)](docs/adr/ADR-004-tobii-runtime-isolation-and-security.md)
-- [In-Process vs. RuntimeHost Architecture (ADR-009)](docs/adr/ADR-009-in-process-vs-runtime-host-architecture.md)
-- [Hardware & Runtime Compatibility Matrix](docs/COMPATIBILITY.md)
-- [Hardware Validation Protocol](docs/HARDWARE_VALIDATION.md)
-- [Legal & Third-Party Notices](LEGAL.md)
+- **[User Guides](docs/README.md#1-user-guide-docsuser)**: [Installation](docs/user/INSTALLATION.md), [Troubleshooting](docs/user/TROUBLESHOOTING.md), [Compatibility](docs/user/COMPATIBILITY.md)
+- **[Project Status](docs/README.md#2-project-status--roadmap-docsproject)**: [Status Dashboard](docs/project/STATUS.md), [Roadmap](docs/project/ROADMAP.md)
+- **[Policies & Compliance](docs/README.md#3-policies--legal-docspolicies)**: [Legal & Provenance](docs/policies/LEGAL.md), [Privacy](docs/policies/PRIVACY.md), [Third-Party Notices](docs/policies/THIRD_PARTY_NOTICES.md)
+- **[Development & Architecture](docs/README.md#4-development--maintainer-sop-docsdevelopment)**: [Agent SOP](docs/development/AGENT_SOP.md), [Documentation Policy](docs/development/DOCUMENTATION_POLICY.md), [Hardware Protocol](docs/development/HARDWARE_VALIDATION.md), [Architecture Decision Records (ADRs)](docs/README.md#6-architecture-decision-records-docsadr)
+- **[Technical Research](docs/README.md#5-technical-research-docsresearch)**: [ABI Provenance](docs/research/ABI_PROVENANCE.md), [Runtime Research](docs/research/RUNTIME_RESEARCH.md), [Callback Research](docs/research/CALLBACK_RESEARCH.md)
+
+---
+
+## Community & Contributing
+
+- **Report Issues**: Submit bug reports via [GitHub Issue Templates](https://github.com/yuanweize/OptiKey-ET5-Plugin/issues/new/choose).
+- **Contributing**: Review our [Contributing Guidelines](.github/CONTRIBUTING.md) and [Code of Conduct](.github/CODE_OF_CONDUCT.md).
+- **Agent Instructions**: Coding agents must follow [`AGENTS.md`](AGENTS.md).
 
 ---
 
