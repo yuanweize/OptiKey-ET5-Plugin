@@ -123,6 +123,7 @@ namespace OptiKey.ET5.Plugin.Core
 
         internal static void LoadFromEnvironment(PluginConfiguration config, IPluginLogger logger)
         {
+            logger = logger ?? new PluginLogger(typeof(PluginConfiguration));
             try
             {
                 string autoSelect = Environment.GetEnvironmentVariable("ET5_AUTOMATIC_DEVICE_SELECTION");
@@ -194,6 +195,7 @@ namespace OptiKey.ET5.Plugin.Core
 
         internal static void LoadFromConfigFile(PluginConfiguration config, IPluginLogger logger, string explicitPath = null)
         {
+            logger = logger ?? new PluginLogger(typeof(PluginConfiguration));
             try
             {
                 string configPath = explicitPath;
