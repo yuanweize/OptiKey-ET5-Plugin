@@ -28,6 +28,7 @@ jobs:
         run: |
           .\tools\scripts\check-doc-sync.ps1
           .\tools\scripts\check-doc-links.ps1
+          .\tools\scripts\test-doc-checkers.ps1
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
