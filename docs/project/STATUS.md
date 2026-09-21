@@ -23,7 +23,7 @@ This document is the canonical readiness dashboard. It distinguishes automated W
 | **Runtime Discovery & Trust** | **VERIFIED** | Dynamic discovery locates installed `tobii_stream_engine.dll` from official services and registry; Authenticode `WinVerifyTrust` validates Tobii code signature. |
 | **Zero Proprietary Bundling** | **VERIFIED** | Zero Tobii binaries or SDK archives are redistributed. Relies entirely on the user's locally installed, officially calibrated Tobii Experience. |
 | **Privacy Invariant** | **VERIFIED** | Coordinates processed strictly in volatile memory. Zero persistence, zero gaze logging, zero network transmission. |
-| **Documentation Parity** | **VERIFIED** | Strict 1:1 English/Simplified Chinese documentation parity verified via `tools/scripts/check-doc-sync.ps1`. |
+| **Documentation Parity** | **VERIFIED** | Strict 1:1 English/Simplified Chinese documentation parity verified via `../../tools/scripts/check-doc-sync.ps1`. |
 | **Hardware Certification** | **UNVERIFIED** | Verified via synthetic end-to-end simulation pipelines; formal certified hardware sessions on physical ET5 devices pending broad community feedback. |
 
 ---

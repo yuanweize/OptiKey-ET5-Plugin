@@ -2,7 +2,7 @@ name: Windows CI & Compatibility Matrix
 
 on:
   push:
-    branches: [ main, dev, 'dev/**' ]
+    branches: [ main, dev, 'dev/**', 'chore/**' ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
@@ -22,11 +22,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify Documentation Synchronization
+      - name: Verify Documentation Synchronization & Links
         if: matrix.contracts_target == 'pinned-stable'
         shell: pwsh
         run: |
           .\tools\scripts\check-doc-sync.ps1
+          .\tools\scripts\check-doc-links.ps1
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2

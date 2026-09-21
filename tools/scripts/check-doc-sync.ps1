@@ -24,14 +24,17 @@ Write-Host "Checking documentation synchronization under: $rootResolved"
 $exemptions = @(
     "LICENSE",
     "OPTIKEY_CONTRACT_REF",
-    "task.md"
+    "PULL_REQUEST_TEMPLATE.md",
+    "bug_report.md",
+    "compatibility_report.md",
+    "install_issue.md"
 )
 
 $errors = @()
 
-# 1. Gather all markdown files in root and docs (excluding .git, bin, obj, packages, artifacts, .github)
+# 1. Gather all markdown files in root, docs, and .github (excluding .git, bin, obj, packages, artifacts, .agents)
 $mdFiles = Get-ChildItem -Path $rootResolved -Recurse -Filter "*.md" | Where-Object {
-    $_.FullName -notmatch '[\\/](\.git|bin|obj|packages|artifacts|\.agents|\.github)[\\/]'
+    $_.FullName -notmatch '[\\/](\.git|bin|obj|packages|artifacts|\.agents)[\\/]'
 }
 
 $fileMap = @{}

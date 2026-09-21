@@ -6,7 +6,7 @@ Thank you for your interest in contributing to open-source accessibility softwar
 
 ## Mandatory Contributor Rules
 
-Before contributing, please read [`AGENTS.md`](AGENTS.md) and [`docs/AGENT_SOP.md`](docs/AGENT_SOP.md). All contributors (human or AI) must strictly observe the following invariants:
+Before contributing, please read [`AGENTS.md`](../AGENTS.md) and [Agent Standard Operating Procedure](../docs/development/AGENT_SOP.md). All contributors (human or AI) must strictly observe the following invariants:
 
 1. **Zero Proprietary Binary Redistribution**: Never commit or pull-request `.dll`, `.lib`, `.sys`, or closed vendor files from Tobii.
 2. **Zero Gaze Data Logging**: Never log, store, or transmit raw gaze coordinates or user information.
@@ -20,11 +20,11 @@ Before contributing, please read [`AGENTS.md`](AGENTS.md) and [`docs/AGENT_SOP.m
    ```bash
    git checkout -b dev/your-feature-name
    ```
-2. Implement your changes following existing code conventions and ADR guidelines in `docs/adr/`.
+2. Implement your changes following existing code conventions and ADR guidelines in [`docs/adr/`](../docs/adr/).
 3. Add or update unit tests under `tests/OptiKey.ET5.Plugin.Tests/`.
 4. Ensure the documentation sync script passes:
    ```powershell
    pwsh .\tools\scripts\check-doc-sync.ps1
    ```
-5. Submit a Pull Request targeting `main` using the provided checklist template in `.github/PULL_REQUEST_TEMPLATE.md`.
+5. Submit a Pull Request targeting `main` using the provided checklist template in `PULL_REQUEST_TEMPLATE.md`.
 6. Ensure all automated Windows CI checks pass with zero unhandled exceptions.

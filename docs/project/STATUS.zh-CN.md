@@ -23,7 +23,7 @@
 | **运行时发现与数字签名** | **已验证 (VERIFIED)** | 动态探测系统自动从系统服务和注册表定位官方 `tobii_stream_engine.dll`，并通过 Authenticode `WinVerifyTrust` 校验签名有效性。 |
 | **零专有二进制分发** | **已验证 (VERIFIED)** | 绝对不分发或捆绑任何 Tobii 二进制文件，完全依赖用户本机合法安装并校准好的官方 Tobii Experience 软件环境。 |
 | **注视隐私不变量** | **已验证 (VERIFIED)** | 数据仅在易失性内存中实时流转，绝不进行本地注视点存储、日志记录或任何形式的网络遥测。 |
-| **双语文档严格对齐** | **已验证 (VERIFIED)** | 通过 `tools/scripts/check-doc-sync.ps1` 脚本自动化校验所有 Markdown 文件的 1:1 中英双语对齐与跨链接。 |
+| **双语文档严格对齐** | **已验证 (VERIFIED)** | 通过 `../../tools/scripts/check-doc-sync.ps1` 脚本自动化校验所有 Markdown 文件的 1:1 中英双语对齐与跨链接。 |
 | **硬件实测认证** | **待社区反馈 (UNVERIFIED)** | 目前已通过端到端合成管道与宿主加载验证；实体 ET5 硬件认证期待广大用户与 AAC 社区实机反馈。 |
 
 ---

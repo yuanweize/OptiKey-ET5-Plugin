@@ -10,7 +10,7 @@ Please ensure all items below are satisfied before requesting review or merging:
 - [ ] **English Documentation Updated**: All changes reflected in relevant `.md` files.
 - [ ] **Chinese Documentation Parity**: Corresponding `.zh-CN.md` files updated with identical semantic content.
 - [ ] **CHANGELOG Updated**: User-visible and architectural changes added to both `CHANGELOG.md` and `CHANGELOG.zh-CN.md`.
-- [ ] **STATUS Updated**: Readiness state refreshed in both `STATUS.md` and `STATUS.zh-CN.md`.
+- [ ] **STATUS Updated**: Readiness state refreshed in both `docs/project/STATUS.md` and `docs/project/STATUS.zh-CN.md`.
 - [ ] **Privacy Invariant Preserved**: Confirmed zero persistence, logging, or transmission of raw gaze coordinates or device URLs.
 - [ ] **OptiKey Contract Preserved**: `ET5PointService` retains parameterless public constructor without early unmanaged allocation.
 
