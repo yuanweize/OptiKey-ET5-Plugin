@@ -10,6 +10,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ET5Diagnostics", "tools\Har
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OptiKey.ET5.Plugin.Tests", "tests\OptiKey.ET5.Plugin.Tests\OptiKey.ET5.Plugin.Tests.csproj", "{991E3B87-4148-4395-88CA-6112C702E661}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PackagedLoaderHarness", "tools\PackagedLoaderHarness\PackagedLoaderHarness.csproj", "{B2A2F4A4-8E53-4EDB-9F1A-7F7CFD5D9BA5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -32,6 +34,10 @@ Global
 		{991E3B87-4148-4395-88CA-6112C702E661}.Debug|x64.Build.0 = Debug|x64
 		{991E3B87-4148-4395-88CA-6112C702E661}.Release|x64.ActiveCfg = Release|x64
 		{991E3B87-4148-4395-88CA-6112C702E661}.Release|x64.Build.0 = Release|x64
+		{B2A2F4A4-8E53-4EDB-9F1A-7F7CFD5D9BA5}.Debug|x64.ActiveCfg = Debug|x64
+		{B2A2F4A4-8E53-4EDB-9F1A-7F7CFD5D9BA5}.Debug|x64.Build.0 = Debug|x64
+		{B2A2F4A4-8E53-4EDB-9F1A-7F7CFD5D9BA5}.Release|x64.ActiveCfg = Release|x64
+		{B2A2F4A4-8E53-4EDB-9F1A-7F7CFD5D9BA5}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

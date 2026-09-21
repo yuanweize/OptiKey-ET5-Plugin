@@ -62,9 +62,13 @@ jobs:
       - name: Run Unit & Integration Tests
         shell: pwsh
         run: |
-          $testDll = (Get-ChildItem -Path tests -Filter "OptiKey.ET5.Plugin.Tests.dll" -Recurse | Where-Object { $_.FullName -match "Release" } | Select-Object -First 1).FullName
-          Write-Host "Executing tests on assembly: $testDll"
-          vstest.console.exe $testDll /Platform:x64
+          .\tools\scripts\run-tests.ps1
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OptiKey-ET5-Plugin-TestResults-${{ matrix.contracts_target }}
+          path: artifacts/test-results/OptiKey.ET5.Plugin.Tests.trx
 
       - name: Package Release ZIP & Audit Integrity
         if: matrix.contracts_target == 'pinned-stable'
@@ -78,7 +82,8 @@ jobs:
         run: |
           $zip = (Get-ChildItem -Path artifacts/release -Filter "OptiKey-ET5-Plugin-*.zip" | Select-Object -First 1).FullName
           $contracts = (Resolve-Path "lib/contracts/JuliusSweetland.OptiKey.Contracts.dll").Path
-          .\tools\scripts\test-packaged-loader.ps1 -ZipPath $zip -ContractsPath $contracts
+          $harness = (Resolve-Path "tools/PackagedLoaderHarness/bin/x64/Release/net46/PackagedLoaderHarness.exe").Path
+          & $harness $zip $contracts (Resolve-Path "tests/OptiKey.ET5.Plugin.Tests/bin/x64/Release/net46").Path
 
       - name: Upload Release Artifacts
         if: always() && matrix.contracts_target == 'pinned-stable'
