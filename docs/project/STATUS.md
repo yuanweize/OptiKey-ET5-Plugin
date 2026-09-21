@@ -3,9 +3,9 @@
 # Project Status & Readiness
 
 - **Status Date**: 2026-09-21
-- **Current Release**: `v0.1.0` (Historical Released Baseline)
-- **Target Patch**: `v0.1.1` (Hardening and Correctness Candidate)
-- **Current Active Branch**: `audit/v0.1.1-hardening` (preparing PR to `main`)
+- **Current Published Version**: `v0.1.0` (Historical Released Baseline)
+- **Patch Candidate**: `v0.1.1` (Release Candidate Validated)
+- **Active PR**: PR #5 (`audit/v0.1.1-hardening` -> `main`)
 
 This document is the canonical readiness dashboard. It explicitly distinguishes automated Windows CI validation from physical hardware validation, runtime containment from native execution bounds, and legal positioning.
 
@@ -32,7 +32,7 @@ This document is the canonical readiness dashboard. It explicitly distinguishes 
 
 ## Release Verdict
 
-**Readiness Verdict**: **v0.1.0 RELEASED / v0.1.1 PATCH IN PROGRESS**
+**Readiness Verdict**: **v0.1.0 RELEASED / v0.1.1 RELEASE CANDIDATE VALIDATED**
 
 - Historical `v0.1.0` remains published on GitHub Releases and is intentionally unmodified to preserve cryptographic release integrity.
-- Critical hardening fixes for post-release audit findings (SEC-01, CONC-01, CONF-01, LIFE-01, LIFE-02, DOC-01, DOC-02) have been implemented on `audit/v0.1.1-hardening` and are undergoing regression testing and Windows CI gates prior to tagging `v0.1.1`.
+- Critical hardening fixes for post-release audit findings (SEC-01, CONC-01, CONF-01, LIFE-01, LIFE-02, DOC-01, DOC-02) have been validated on PR #5 across full Windows CI matrices and release dry-run packaging prior to merging into main and tagging `v0.1.1`.

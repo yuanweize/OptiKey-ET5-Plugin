@@ -41,8 +41,8 @@ Every handoff lead was independently verified against active code and live GitHu
 | **SOP-01** | **P2** | Documentation | `AGENTS.md`, `AGENTS.zh-CN.md` | **FIXED** (Corrected binding filename in Mandate 17) |
 | **PRIV-01** | **P2** | Privacy | `TobiiRuntimeLocator.cs`, `TobiiStreamEngineBinding.cs` | **FIXED** (Verified by `PathSanitizerTests`) |
 | **CI-01** | **P2** | CI / Automation | `.github/workflows/build-and-test.yml` | **FIXED** (Branch pattern and self-test step added) |
-| **CI-02** | **P2** | CI Supply Chain | Node.js 20 deprecations in GitHub Actions | Documented / Tracked |
-| **GOV-01** | **P2** | Governance | GitHub branch protection rules on `main` | Documented / Recommended |
+| **CI-02** | **P2** | CI Supply Chain | Node.js 20 deprecations in GitHub Actions | **TRACKED** (Upstream dependency deprecation) |
+| **GOV-01** | **P2** | Governance | GitHub branch protection rules on `main` | **OPEN** (Solo-maintainer governance recommendation) |
 
 ---
 
@@ -57,7 +57,7 @@ Every handoff lead was independently verified against active code and live GitHu
 - **User Impact**: Critical security vulnerability. Tampered or malicious binaries mimicking Tobii certificate headers could be loaded into the OptiKey host process.
 - **Fix**: Require `trustResult.SignatureStatus == SignatureStatus.Valid && trustResult.SignerMatchesTobii && trustResult.ChainStatus != ChainStatus.Revoked` in `TobiiRuntimeLocator.LocateRuntime()`.
 - **Regression Test**: Add tests in `RuntimeTrustVerifierTests.cs` verifying rejection of `SignatureStatus.HashMismatch`, `SignatureStatus.Unsigned`, `SignatureStatus.Error`, and `ChainStatus.Revoked`.
-- **Status**: Identified / Pending Fix.
+- **Status**: FIXED — verified by RuntimeTrustVerifierTests and Windows CI.
 
 ---
 
@@ -83,7 +83,7 @@ Every handoff lead was independently verified against active code and live GitHu
 - **User Impact**: Host application freeze of 500ms on plugin teardown/switch; erroneous timeout and stuck-worker warnings.
 - **Fix**: Refactor `Dispose()` in both pumps to request stop under lock, release lock, join outside lock, and clean up resources under lock.
 - **Regression Test**: Add deterministic tests asserting direct `Dispose()` on running pumps exits in < 100ms with state `Disposed`.
-- **Status**: Identified / Pending Fix.
+- **Status**: FIXED — verified by CallbackShutdownTests and Windows CI.
 
 ---
 
@@ -96,7 +96,7 @@ Every handoff lead was independently verified against active code and live GitHu
 - **User Impact**: Developer environment variable overrides fail to take effect if a local config file exists.
 - **Fix**: Invert load order to `LoadFromConfigFile(config)` first, then `LoadFromEnvironment(config)` second, and ensure all config file settings apply cleanly.
 - **Regression Test**: Add tests covering precedence for every individual configuration setting.
-- **Status**: Identified / Pending Fix.
+- **Status**: FIXED — verified by ConfigurationPrecedenceTests and Windows CI.
 
 ---
 
@@ -109,7 +109,7 @@ Every handoff lead was independently verified against active code and live GitHu
 - **User Impact**: Redundant startup attempts and potential state churn on multi-subscriber scenarios.
 - **Fix**: Check `bool isFirst = (pointEvent == null); pointEvent += value; if (isFirst) EnsureStarted();`.
 - **Regression Test**: Add tests verifying `Start()` is called exactly once when multiple subscribers register, and `Stop()` is called only when the last subscriber unregisters.
-- **Status**: Identified / Pending Fix.
+- **Status**: FIXED — verified by PointServiceSubscriptionLifecycleTests and Windows CI.
 
 ---
 
@@ -120,7 +120,7 @@ Every handoff lead was independently verified against active code and live GitHu
 - **Expected Behavior**: Never hold event locks across long-running or blocking provider teardowns.
 - **Fix**: Unhook events and clear delegates inside `eventLock`, then call `gazeProvider.Dispose()` outside `eventLock`.
 - **Regression Test**: Add test disposing `ET5PointService` concurrently with active callback simulation.
-- **Status**: Identified / Pending Fix.
+- **Status**: FIXED — verified by PointServiceSubscriptionLifecycleTests and Windows CI.
 
 ---
 
@@ -139,7 +139,7 @@ Every handoff lead was independently verified against active code and live GitHu
 - **User Impact**: Broken links for external developers; leakage of author's local directory structure in public documentation.
 - **Fix**: Update documentation links to valid relative paths; strengthen `check-doc-links.ps1` to fail on `file://` and machine-specific absolute paths.
 - **Regression Test**: Add automated checker self-test validating rejection of machine-local paths.
-- **Status**: Identified / Pending Fix.
+- **Status**: FIXED — verified by test-doc-checkers.ps1 and Windows CI.
 
 ---
 
@@ -151,7 +151,7 @@ Every handoff lead was independently verified against active code and live GitHu
 - **Reproduction**: Inspect `EyeTrackerPluginEngine.GetTopLevelPluginDirectory()` in `OptiKey/OptiKey` source code.
 - **User Impact**: Manual installation fails completely if users copy files to the documented path because OptiKey does not scan `%APPDATA%\OptiKey\OptiKey\Plugins\`.
 - **Fix**: Correct all English and Chinese documentation to `%APPDATA%\OptiKey\OptiKey\EyeTrackerPlugins\`.
-- **Status**: Identified / Pending Fix.
+- **Status**: FIXED — source/document consistency verified against upstream OptiKey.
 
 ---
 
@@ -161,7 +161,7 @@ Every handoff lead was independently verified against active code and live GitHu
 - **Observed Behavior**: Documentation stated: "the production path currently fails closed after enumeration and before device creation." In reality, `TobiiGazeProvider` automatically binds to `deviceUrls[0]` when exactly one device candidate is detected.
 - **Expected Behavior**: Documentation must accurately describe active source code behavior.
 - **Fix**: Update ABI provenance documentation to describe single-device auto-binding, multi-device safety guards, and explicit device index configuration.
-- **Status**: Identified / Pending Fix.
+- **Status**: FIXED — source/document consistency verified against active provider.
 
 ---
 
@@ -171,7 +171,7 @@ Every handoff lead was independently verified against active code and live GitHu
 - **Observed Behavior**: Documentation claimed "Eye Tracker 5 detected", whereas code only enumerates device candidates from the Tobii Stream Engine runtime and auto-connects if exactly one candidate exists. The exact hardware model is not verified due to unproven `tobii_get_device_info` ABI.
 - **Expected Behavior**: Use precise wording: "single compatible Tobii runtime candidate" rather than asserting hardware model proof.
 - **Fix**: Update documentation and logs to precise terminology.
-- **Status**: Identified / Pending Fix.
+- **Status**: FIXED — source/document consistency verified across user documentation.
 
 ---
 
@@ -181,7 +181,7 @@ Every handoff lead was independently verified against active code and live GitHu
 - **Observed Behavior**: Comments and docs asserted "guaranteed bounded native shutdown" for `tobii_device_process_callbacks()`, whereas the native return behavior is empirical and unproven on real ET5 hardware.
 - **Expected Behavior**: Clearly separate managed shutdown containment (CI verified) from native Tobii runtime callback return behavior (unproven / runtime-dependent).
 - **Fix**: Clarify claims across documentation and code comments.
-- **Status**: Identified / Pending Fix.
+- **Status**: FIXED — source/document consistency verified across research docs and code comments.
 
 ---
 
@@ -191,7 +191,7 @@ Every handoff lead was independently verified against active code and live GitHu
 - **Observed Behavior**: Mandate 17 cited `TobiiStreamEngineNative.cs`. The actual file is `src/OptiKey.ET5.Plugin/Runtime/Interop/TobiiStreamEngineBinding.cs`.
 - **Expected Behavior**: All filenames cited in repository mandates must exist.
 - **Fix**: Correct the path in both `AGENTS.md` and `AGENTS.zh-CN.md`.
-- **Status**: Identified / Pending Fix.
+- **Status**: FIXED — source/document consistency verified in AGENTS.md Mandate 17.
 
 ---
 
@@ -201,7 +201,7 @@ Every handoff lead was independently verified against active code and live GitHu
 - **Observed Behavior**: Probed candidate paths and loaded library paths were logged as raw strings. If a path was located in a user directory (`%LOCALAPPDATA%` or developer explicit path), the user's local username would be exposed in log files.
 - **Expected Behavior**: Sanitize user paths by replacing user profile prefixes with `%USERPROFILE%` or `%LOCALAPPDATA%` before logging.
 - **Fix**: Implement path sanitization utility and apply to diagnostic log messages.
-- **Status**: Identified / Pending Fix.
+- **Status**: FIXED — verified by PathSanitizerTests and Windows CI.
 
 ---
 
@@ -211,7 +211,7 @@ Every handoff lead was independently verified against active code and live GitHu
 - **Observed Behavior**: Workflow triggered on `main, dev, 'dev/**', 'chore/**'`, but not `'audit/**'`.
 - **Expected Behavior**: Pushing to `audit/**` should trigger the full Windows CI matrix.
 - **Fix**: Add `'audit/**'` to the branches trigger list.
-- **Status**: Identified / Pending Fix.
+- **Status**: FIXED — verified by GitHub Actions CI execution.
 
 ---
 
@@ -220,7 +220,7 @@ Every handoff lead was independently verified against active code and live GitHu
 - **File**: `.github/workflows/build-and-test.yml`, `.github/workflows/release.yml`
 - **Observed Behavior**: CI runs report Node.js 20 deprecation annotations for `actions/checkout@v4`, `actions/upload-artifact@v4`, `microsoft/setup-msbuild@v2`, `NuGet/setup-nuget@v2`, `darenm/Setup-VSTest@v1.2`.
 - **Expected Behavior**: Runners currently force Node 24 execution. Track action upstream releases for official Node 24 support.
-- **Status**: Documented / Tracked.
+- **Status**: TRACKED — upstream GitHub Actions runner and action dependency issue.
 
 ---
 
@@ -229,6 +229,6 @@ Every handoff lead was independently verified against active code and live GitHu
 - **File**: GitHub Repository Settings
 - **Observed Behavior**: `main` branch has `protected: false`, and `delete_branch_on_merge: false`.
 - **Expected Behavior**: Solo-maintainer branch protection rules requiring PRs, passing Windows CI matrix, blocking force pushes and branch deletion, and enabling automatic branch pruning.
-- **Status**: Documented / Recommended.
+- **Status**: OPEN — non-blocking governance recommendation for repository maintainer.
 
 ---

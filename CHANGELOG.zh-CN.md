@@ -7,7 +7,7 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并遵循 [语义化版本 2.0.0](https://semver.org/lang/zh-CN/) 规范。
 
-## [0.1.1] - 未发布 (Unreleased)
+## [0.1.1] - 2026-09-21
 
 ### 安全与隐私
 - 在 `TobiiRuntimeLocator` 中强制执行严格的 Authenticode 数字签名完整性校验（`SignatureStatus.Valid`）与非吊销检查，杜绝因仅校验 Subject 造成加载篡改或未签名二进制的风险 (SEC-01)。

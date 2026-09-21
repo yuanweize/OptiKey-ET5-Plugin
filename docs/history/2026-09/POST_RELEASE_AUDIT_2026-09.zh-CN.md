@@ -41,8 +41,8 @@
 | **SOP-01** | **P2** | 规范文档 | `AGENTS.md`, `AGENTS.zh-CN.md` | **已修复**（修正准则 17 原生绑定文件名） |
 | **PRIV-01** | **P2** | 隐私 | `TobiiRuntimeLocator.cs`, `TobiiStreamEngineBinding.cs` | **已修复**（由 `PathSanitizerTests` 验证） |
 | **CI-01** | **P2** | CI 自动化 | `.github/workflows/build-and-test.yml` | **已修复**（已添加分支匹配规则与自测步骤） |
-| **CI-02** | **P2** | CI 供应链 | GitHub Actions 运行器中的 Node.js 20 弃用警告 | 已记录 / 跟踪 |
-| **GOV-01** | **P2** | 仓库治理 | `main` 分支保护规则与自动分支清理 | 已记录 / 建议 |
+| **CI-02** | **P2** | CI 供应链 | GitHub Actions 运行器中的 Node.js 20 弃用警告 | **跟踪中**（上游依赖项弃用） |
+| **GOV-01** | **P2** | 仓库治理 | `main` 分支保护规则与自动分支清理 | **开放**（单人维护者仓库治理建议） |
 
 ---
 
@@ -57,7 +57,7 @@
 - **用户影响**：严重安全漏洞。恶意构造或被篡改的二进制文件可能注入 OptiKey 宿主进程。
 - **修复方案**：在 `TobiiRuntimeLocator.LocateRuntime()` 中严格要求 `trustResult.SignatureStatus == SignatureStatus.Valid && trustResult.SignerMatchesTobii && trustResult.ChainStatus != ChainStatus.Revoked`。
 - **回归测试**：在 `RuntimeTrustVerifierTests.cs` 中增加拒绝 `SignatureStatus.HashMismatch`、`SignatureStatus.Unsigned`、`SignatureStatus.Error` 和 `ChainStatus.Revoked` 的测试。
-- **状态**：已确认 / 待修复。
+- **状态**：已修复 — 由 RuntimeTrustVerifierTests 及 Windows CI 验证。
 
 ---
 
@@ -83,7 +83,7 @@
 - **用户影响**：用户切换或关闭插件时 OptiKey 宿主出现 500ms 卡顿，并产生虚假的线程超时与卡死警告。
 - **修复方案**：重构两个泵的 `Dispose()`：锁内请求停止，锁外 Join，锁内清理资源。
 - **回归测试**：增加确定性测试，断言运行中泵直接 `Dispose()` 在 100ms 内完成且最终状态为 `Disposed`。
-- **状态**：已确认 / 待修复。
+- **状态**：已修复 — 由 CallbackShutdownTests 及 Windows CI 验证。
 
 ---
 
@@ -96,7 +96,7 @@
 - **用户影响**：在存在本地配置文件时，开发者的环境变量覆盖失效。
 - **修复方案**：将加载顺序调整为先 `LoadFromConfigFile(config)` 后 `LoadFromEnvironment(config)`，确保配置文件的所有字段正确生效并由环境变量覆盖。
 - **回归测试**：针对每一项配置单独编写优先级覆盖测试。
-- **状态**：已确认 / 待修复。
+- **状态**：已修复 — 由 ConfigurationPrecedenceTests 及 Windows CI 验证。
 
 ---
 
@@ -109,7 +109,7 @@
 - **用户影响**：多订阅者场景下产生多余的启动调用和状态扰动。
 - **修复方案**：判断 `bool isFirst = (pointEvent == null); pointEvent += value; if (isFirst) EnsureStarted();`。
 - **回归测试**：增加测试验证多次注册仅启动一次，最后一个注销时仅停止一次。
-- **状态**：已确认 / 待修复。
+- **状态**：已修复 — 由 PointServiceSubscriptionLifecycleTests 及 Windows CI 验证。
 
 ---
 
@@ -120,7 +120,7 @@
 - **预期行为**：避免在持有用户/事件锁时执行耗时或阻塞的提供者释放。
 - **修复方案**：在 `eventLock` 内部解绑事件并置空委托，退出 `eventLock` 后再调用 `gazeProvider.Dispose()`。
 - **回归测试**：增加在活跃回调模拟期间释放 `ET5PointService` 的测试。
-- **状态**：已确认 / 待修复。
+- **状态**：已修复 — 由 PointServiceSubscriptionLifecycleTests 及 Windows CI 验证。
 
 ---
 
@@ -139,7 +139,7 @@
 - **用户影响**：外部开发者点击链接失效；公开文档中泄漏了作者本地机器目录。
 - **修复方案**：将文档链接修正为相对路径；强化 `check-doc-links.ps1` 拦截 `file://` 和机器绝对路径。
 - **回归测试**：增加校验器自测试，验证对机器本地路径的准确拦截。
-- **状态**：已确认 / 待修复。
+- **状态**：已修复 — 由 test-doc-checkers.ps1 及 Windows CI 验证。
 
 ---
 
@@ -151,7 +151,7 @@
 - **重现方式**：查阅 `OptiKey/OptiKey` 源码中 `EyeTrackerPluginEngine.GetTopLevelPluginDirectory()`。
 - **用户影响**：若用户按照文档将文件复制到 `%APPDATA%\OptiKey\OptiKey\Plugins\`，OptiKey 根本不会扫描该目录，导致手动安装彻底失败。
 - **修复方案**：修正所有中英文文档为 `%APPDATA%\OptiKey\OptiKey\EyeTrackerPlugins\`。
-- **状态**：已确认 / 待修复。
+- **状态**：已修复 — 源代码与文档一致性已对照上游 OptiKey 验证。
 
 ---
 
@@ -161,7 +161,7 @@
 - **观察到的行为**：文档声称：“生产路径在枚举之后、设备创建之前保持失败闭合（fails closed）”。而实际上 `TobiiGazeProvider` 在检测到单个设备候选时会自动绑定并连接 `deviceUrls[0]`。
 - **预期行为**：文档必须准确反映当前活跃代码的真实行为。
 - **修复方案**：更新 ABI 文档，准确描述单设备自动绑定、多设备安全防护以及显式设备配置策略。
-- **状态**：已确认 / 待修复。
+- **状态**：已修复 — 源代码与文档一致性已对照活跃提供者验证。
 
 ---
 
@@ -171,7 +171,7 @@
 - **观察到的行为**：文档声称“检测到 Eye Tracker 5”，而代码实际上只是从 Tobii Stream Engine 枚举候选设备，并在存在唯一候选时连接。由于 `tobii_get_device_info` ABI 尚未验证，代码并未验证设备具体硬件型号。
 - **预期行为**：使用精确表述：“检测到单个兼容的 Tobii 运行时候选设备”，而非断言硬件型号已被证明。
 - **修复方案**：更新文档与日志至精确表述。
-- **状态**：已确认 / 待修复。
+- **状态**：已修复 — 源代码与文档一致性已在全量用户文档中验证。
 
 ---
 
@@ -181,7 +181,7 @@
 - **观察到的行为**：注释与文档对 `tobii_device_process_callbacks()` 声称“保证有界本地关闭”，而该本地调用的返回行为在实际 ET5 硬件上仍属经验性、未完全验证的课题。
 - **预期行为**：明确区分托管层关闭超时控制（CI 已验证）与本地 Tobii 运行时回调返回行为（依赖环境 / 未经验证）。
 - **修复方案**：澄清中英文文档与代码注释中的相关表述。
-- **状态**：已确认 / 待修复。
+- **状态**：已修复 — 源代码与文档一致性已在研究文档与代码注释中验证。
 
 ---
 
@@ -191,7 +191,7 @@
 - **观察到的行为**：准则 17 引用了 `TobiiStreamEngineNative.cs`。实际文件为 `src/OptiKey.ET5.Plugin/Runtime/Interop/TobiiStreamEngineBinding.cs`。
 - **预期行为**：准则中引用的所有文件名必须存在。
 - **修复方案**：修正 `AGENTS.md` 与 `AGENTS.zh-CN.md` 中的路径。
-- **状态**：已确认 / 待修复。
+- **状态**：已修复 — 源代码与文档一致性已在 AGENTS.md 准则 17 中验证。
 
 ---
 
@@ -201,7 +201,7 @@
 - **观察到的行为**：探测的候选路径与加载的库路径直接以原始字符串记入日志。若路径位于用户目录中（如 `%LOCALAPPDATA%` 或开发者指定路径），会泄漏本地用户名。
 - **预期行为**：在日志输出前脱敏用户目录前缀，替换为 `%USERPROFILE%` 或 `%LOCALAPPDATA%`。
 - **修复方案**：引入路径脱敏工具类并应用于诊断日志。
-- **状态**：已确认 / 待修复。
+- **状态**：已修复 — 由 PathSanitizerTests 及 Windows CI 验证。
 
 ---
 
@@ -211,7 +211,7 @@
 - **观察到的行为**：工作流仅在 `main, dev, 'dev/**', 'chore/**'` 上触发 push CI，未包含 `'audit/**'`。
 - **预期行为**：推送至 `audit/**` 分支时应自动触发完整的 Windows CI 矩阵。
 - **修复方案**：在分支触发列表中添加 `'audit/**'`。
-- **状态**：已确认 / 待修复。
+- **状态**：已修复 — 由 GitHub Actions CI 执行验证。
 
 ---
 
@@ -220,7 +220,7 @@
 - **文件**：`.github/workflows/build-and-test.yml`, `.github/workflows/release.yml`
 - **观察到的行为**：CI 运行日志标注了 `actions/checkout@v4`, `actions/upload-artifact@v4`, `microsoft/setup-msbuild@v2`, `NuGet/setup-nuget@v2`, `darenm/Setup-VSTest@v1.2` 的 Node.js 20 弃用警告。
 - **预期行为**：运行器当前已强制使用 Node 24 运行。持续跟踪上游 Action 官方对 Node 24 的升级版本。
-- **状态**：已记录 / 跟踪。
+- **状态**：跟踪中 — 上游 GitHub Actions 运行器与 Action 依赖项问题。
 
 ---
 
@@ -229,6 +229,6 @@
 - **文件**：GitHub 仓库设置
 - **观察到的行为**：`main` 分支 `protected: false`，且 `delete_branch_on_merge: false`。
 - **预期行为**：建立适合单人维护者的分支保护策略（强制 PR、强制 Windows CI 状态检查通过、禁止强制推送与删除、开启合并后自动删除特性分支）。
-- **状态**：已记录 / 建议。
+- **状态**：开放 — 面向仓库维护者的非阻塞性治理建议。
 
 ---
