@@ -194,12 +194,13 @@ namespace OptiKey.ET5.Plugin.Runtime
                         if (waitError == tobii_error_t.TOBII_ERROR_NO_ERROR)
                         {
                             var processError = runtime.ProcessCallbacks();
-                            if (processError != tobii_error_t.TOBII_ERROR_NO_ERROR)
+                            if (processError != tobii_error_t.TOBII_ERROR_NO_ERROR &&
+                                processError != tobii_error_t.TOBII_ERROR_TIMED_OUT)
                             {
                                 HandleStreamError(processError);
                             }
                         }
-                        else
+                        else if (waitError != tobii_error_t.TOBII_ERROR_TIMED_OUT)
                         {
                             HandleStreamError(waitError);
                         }

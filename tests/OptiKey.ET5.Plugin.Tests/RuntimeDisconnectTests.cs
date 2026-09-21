@@ -49,7 +49,8 @@ namespace OptiKey.ET5.Plugin.Tests
             }
             Assert.That(provider.IsConnected, Is.True, "Should connect initially");
 
-            // Inject mid-stream disconnect
+            // Inject mid-stream disconnect and prevent immediate reconnection
+            disconnectRuntime.AllowReconnect = false;
             disconnectRuntime.TriggerDisconnect();
 
             // Wait for transition to Reconnecting

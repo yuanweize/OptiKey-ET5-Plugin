@@ -105,11 +105,13 @@ namespace OptiKey.ET5.Plugin.Tests
             provider.Start();
 
             Thread.Sleep(100);
-            provider.Stop();
 
             Assert.That(fakeRuntime.ConnectedUrl, Is.EqualTo("tobii-prx://device-candidate-1"),
                 "Explicit index 1 must select the second device");
             Assert.That(fakeRuntime.DeviceWasConnected, Is.True);
+
+            provider.Stop();
+            provider.Dispose();
         }
 
         private class TrackingFakeRuntime : ITobiiRuntime
