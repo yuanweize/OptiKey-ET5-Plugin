@@ -99,11 +99,16 @@ namespace OptiKey.ET5.Plugin.Tests
 
             var provider = new TobiiGazeProvider(fakeRuntime, configuration: config);
             provider.Start();
-            Thread.Sleep(100);
-            provider.Stop();
+            for (int i = 0; i < 50 && !provider.IsConnected; i++)
+            {
+                Thread.Sleep(10);
+            }
 
+            Assert.That(provider.IsConnected, Is.True, "Provider should connect to the sole candidate");
             Assert.That(fakeRuntime.DeviceWasConnected, Is.True);
             Assert.That(fakeRuntime.ConnectedUrl, Is.EqualTo("tobii-prx://sole-candidate-device"));
+
+            provider.Stop();
             provider.Dispose();
         }
 
@@ -152,7 +157,10 @@ namespace OptiKey.ET5.Plugin.Tests
             var provider = new TobiiGazeProvider(fakeRuntime, configuration: config);
             provider.Start();
 
-            Thread.Sleep(100);
+            for (int i = 0; i < 50 && !provider.IsConnected; i++)
+            {
+                Thread.Sleep(10);
+            }
 
             Assert.That(fakeRuntime.ConnectedUrl, Is.EqualTo("tobii-prx://device-candidate-1"),
                 "Explicit index 1 must select the second device");
@@ -187,8 +195,6 @@ namespace OptiKey.ET5.Plugin.Tests
             }
             public bool DisconnectDevice()
             {
-                DeviceWasConnected = false;
-                ConnectedUrl = null;
                 return true;
             }
             public bool ReconnectDevice() => false;

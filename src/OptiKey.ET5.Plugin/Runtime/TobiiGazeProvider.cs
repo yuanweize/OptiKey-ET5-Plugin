@@ -133,16 +133,23 @@ namespace OptiKey.ET5.Plugin.Runtime
                 try { ctsToCancel.Cancel(); } catch (ObjectDisposedException) { }
             }
 
+            bool pumpClean = true;
             if (pumpToStop != null)
             {
                 try
                 {
                     pumpToStop.RequestStop();
-                    pumpToStop.Join(TimeSpan.FromMilliseconds(Math.Min(stopTimeout.TotalMilliseconds, 200)));
+                    bool pumpJoined = pumpToStop.Join(TimeSpan.FromMilliseconds(Math.Min(stopTimeout.TotalMilliseconds, 200)));
+                    if (!pumpJoined || pumpToStop.State == CallbackPumpState.TimedOut)
+                    {
+                        pumpClean = false;
+                        logger.Warn("Callback pump timed out or did not stop cleanly.");
+                    }
                 }
                 catch (Exception ex)
                 {
                     logger.Warn($"Exception while stopping callback pump: {ex.Message}");
+                    pumpClean = false;
                 }
                 finally
                 {
@@ -150,23 +157,25 @@ namespace OptiKey.ET5.Plugin.Runtime
                 }
             }
 
-            bool joined = true;
+            bool workerJoined = true;
             if (threadToJoin != null && threadToJoin.IsAlive && threadToJoin != Thread.CurrentThread)
             {
-                joined = threadToJoin.Join(stopTimeout);
+                workerJoined = threadToJoin.Join(stopTimeout);
             }
+
+            bool cleanShutdown = pumpClean && workerJoined;
 
             lock (lifecycleLock)
             {
-                if (!joined)
+                if (!cleanShutdown)
                 {
                     logger.Error(
-                        $"CRITICAL: Worker thread did not terminate within {stopTimeout.TotalSeconds:F1}s. " +
+                        $"CRITICAL: Worker thread or callback pump did not terminate within {stopTimeout.TotalSeconds:F1}s. " +
                         "Native thread is potentially stuck in tobii_wait_for_callbacks. " +
                         "Aborting native handle cleanup to prevent use-after-free.");
 
                     stateMachine.TryTransition(GazeServiceState.Stopped,
-                        new GazeServiceError("STUCK_WORKER", "Worker thread failed to terminate during Stop()."));
+                        new GazeServiceError("STUCK_WORKER", "Worker thread or callback pump failed to terminate during Stop()."));
                     ConnectionStatusChanged?.Invoke(this, false);
                     return;
                 }
@@ -543,14 +552,15 @@ namespace OptiKey.ET5.Plugin.Runtime
                 cts = null;
                 try { oldCts?.Dispose(); } catch { }
 
+                bool hasStuckError = stateMachine.LastError != null && stateMachine.LastError.ErrorCode == "STUCK_WORKER";
                 bool workerClean = (workerThread == null || !workerThread.IsAlive);
-                if (workerClean)
+                if (workerClean && !hasStuckError)
                 {
                     runtime.Dispose();
                 }
                 else
                 {
-                    logger.Warn("Worker thread is still active after Stop() timeout; skipping runtime.Dispose() to prevent native use-after-free.");
+                    logger.Warn("Worker thread or callback pump is still active after Stop() timeout; skipping runtime.Dispose() to prevent native use-after-free.");
                 }
 
                 logger.Info("TobiiGazeProvider disposed.");
