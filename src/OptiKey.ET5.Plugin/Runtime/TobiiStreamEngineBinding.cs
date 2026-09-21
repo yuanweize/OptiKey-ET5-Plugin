@@ -67,6 +67,8 @@ namespace OptiKey.ET5.Plugin.Runtime
 
     /// <summary>
     /// Dynamic binding layer for tobii_stream_engine.dll using a verified absolute path.
+    /// Supports capability-based loading: missing optional exports degrade gracefully
+    /// instead of failing the entire load. No Tobii function is called during binding.
     /// </summary>
     public class TobiiStreamEngineBinding : IDisposable
     {
@@ -84,8 +86,12 @@ namespace OptiKey.ET5.Plugin.Runtime
 
         private IntPtr moduleHandle = IntPtr.Zero;
         private readonly IPluginLogger logger;
+        private RuntimeCapabilities capabilities;
 
-        // Native function delegates
+        // --- Native function delegates ---
+
+        #region Delegate types
+
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate tobii_error_t tobii_api_create_delegate(out IntPtr api, IntPtr custom_alloc, IntPtr custom_log);
 
@@ -119,6 +125,10 @@ namespace OptiKey.ET5.Plugin.Runtime
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate IntPtr tobii_error_message_delegate(tobii_error_t error);
 
+        #endregion
+
+        #region Bound delegate instances
+
         private tobii_api_create_delegate fn_tobii_api_create;
         private tobii_api_destroy_delegate fn_tobii_api_destroy;
         private tobii_enumerate_local_device_urls_delegate fn_tobii_enumerate_local_device_urls;
@@ -131,13 +141,28 @@ namespace OptiKey.ET5.Plugin.Runtime
         private tobii_gaze_point_unsubscribe_delegate fn_tobii_gaze_point_unsubscribe;
         private tobii_error_message_delegate fn_tobii_error_message;
 
+        #endregion
+
         public bool IsLoaded => moduleHandle != IntPtr.Zero;
+
+        /// <summary>
+        /// The capabilities discovered from the loaded runtime. Null if not loaded.
+        /// </summary>
+        public RuntimeCapabilities Capabilities => capabilities;
 
         public TobiiStreamEngineBinding(IPluginLogger logger = null)
         {
             this.logger = logger ?? new PluginLogger(typeof(TobiiStreamEngineBinding));
         }
 
+        /// <summary>
+        /// Load the native runtime from an absolute path and discover all available exports.
+        /// Missing CORE REQUIRED or DEVICE REQUIRED exports cause the load to fail.
+        /// Missing GAZE REQUIRED, STRATEGY DEPENDENT, or OPTIONAL exports are recorded
+        /// in capabilities but do not prevent loading.
+        ///
+        /// No Tobii function is executed during this call. Only GetProcAddress is used.
+        /// </summary>
         public bool Load(string libraryPath)
         {
             if (IsLoaded)
@@ -160,54 +185,121 @@ namespace OptiKey.ET5.Plugin.Runtime
                 return false;
             }
 
-            try
+            // Discover capabilities via safe TryBind (GetProcAddress only, no execution)
+            var missingRequired = new List<string>();
+            var missingOptional = new List<string>();
+
+            // --- CORE REQUIRED ---
+            fn_tobii_api_create = TryBind<tobii_api_create_delegate>("tobii_api_create", missingRequired, isRequired: true);
+            fn_tobii_api_destroy = TryBind<tobii_api_destroy_delegate>("tobii_api_destroy", missingRequired, isRequired: true);
+            fn_tobii_enumerate_local_device_urls = TryBind<tobii_enumerate_local_device_urls_delegate>(
+                "tobii_enumerate_local_device_urls", missingRequired, isRequired: true);
+
+            // --- DEVICE REQUIRED ---
+            fn_tobii_device_create = TryBind<tobii_device_create_delegate>("tobii_device_create", missingRequired, isRequired: true);
+            fn_tobii_device_destroy = TryBind<tobii_device_destroy_delegate>("tobii_device_destroy", missingRequired, isRequired: true);
+
+            // --- GAZE REQUIRED ---
+            fn_tobii_gaze_point_subscribe = TryBind<tobii_gaze_point_subscribe_delegate>(
+                "tobii_gaze_point_subscribe", missingOptional, isRequired: false);
+            fn_tobii_gaze_point_unsubscribe = TryBind<tobii_gaze_point_unsubscribe_delegate>(
+                "tobii_gaze_point_unsubscribe", missingOptional, isRequired: false);
+            fn_tobii_device_process_callbacks = TryBind<tobii_device_process_callbacks_delegate>(
+                "tobii_device_process_callbacks", missingOptional, isRequired: false);
+
+            // --- STRATEGY DEPENDENT ---
+            fn_tobii_wait_for_callbacks = TryBind<tobii_wait_for_callbacks_delegate>(
+                "tobii_wait_for_callbacks", missingOptional, isRequired: false);
+
+            // --- OPTIONAL ---
+            fn_tobii_device_reconnect = TryBind<tobii_device_reconnect_delegate>(
+                "tobii_device_reconnect", missingOptional, isRequired: false);
+            fn_tobii_error_message = TryBind<tobii_error_message_delegate>(
+                "tobii_error_message", missingOptional, isRequired: false);
+
+            // Build immutable capabilities snapshot
+            capabilities = new RuntimeCapabilities(
+                hasApiCreate: fn_tobii_api_create != null,
+                hasApiDestroy: fn_tobii_api_destroy != null,
+                hasEnumerateDevices: fn_tobii_enumerate_local_device_urls != null,
+                hasDeviceCreate: fn_tobii_device_create != null,
+                hasDeviceDestroy: fn_tobii_device_destroy != null,
+                hasGazePointSubscribe: fn_tobii_gaze_point_subscribe != null,
+                hasGazePointUnsubscribe: fn_tobii_gaze_point_unsubscribe != null,
+                hasProcessCallbacks: fn_tobii_device_process_callbacks != null,
+                hasWaitForCallbacks: fn_tobii_wait_for_callbacks != null,
+                hasDeviceReconnect: fn_tobii_device_reconnect != null,
+                hasErrorMessage: fn_tobii_error_message != null,
+                missingRequired: missingRequired.AsReadOnly(),
+                missingOptional: missingOptional.AsReadOnly(),
+                runtimePath: libraryPath);
+
+            // Fail load only if core/device required exports are missing
+            if (missingRequired.Count > 0)
             {
-                fn_tobii_api_create = Bind<tobii_api_create_delegate>("tobii_api_create");
-                fn_tobii_api_destroy = Bind<tobii_api_destroy_delegate>("tobii_api_destroy");
-                fn_tobii_enumerate_local_device_urls = Bind<tobii_enumerate_local_device_urls_delegate>("tobii_enumerate_local_device_urls");
-                fn_tobii_device_create = Bind<tobii_device_create_delegate>("tobii_device_create");
-                fn_tobii_device_destroy = Bind<tobii_device_destroy_delegate>("tobii_device_destroy");
-                fn_tobii_device_reconnect = Bind<tobii_device_reconnect_delegate>("tobii_device_reconnect");
-                fn_tobii_wait_for_callbacks = Bind<tobii_wait_for_callbacks_delegate>("tobii_wait_for_callbacks");
-                fn_tobii_device_process_callbacks = Bind<tobii_device_process_callbacks_delegate>("tobii_device_process_callbacks");
-                fn_tobii_gaze_point_subscribe = Bind<tobii_gaze_point_subscribe_delegate>("tobii_gaze_point_subscribe");
-                fn_tobii_gaze_point_unsubscribe = Bind<tobii_gaze_point_unsubscribe_delegate>("tobii_gaze_point_unsubscribe");
-                fn_tobii_error_message = Bind<tobii_error_message_delegate>("tobii_error_message");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                logger.Error("Failed to bind essential Tobii Stream Engine functions.", ex);
+                logger.Error($"Runtime is missing {missingRequired.Count} required export(s): {string.Join(", ", missingRequired)}");
                 Dispose();
                 return false;
             }
+
+            // Log optional/gaze capability gaps as info, not errors
+            if (missingOptional.Count > 0)
+            {
+                logger.Info($"Runtime is missing {missingOptional.Count} optional/gaze export(s): {string.Join(", ", missingOptional)}");
+            }
+
+            logger.Info($"Tobii runtime loaded with capabilities: " +
+                $"CanCreateApi={capabilities.CanCreateApi}, " +
+                $"CanCreateDevice={capabilities.CanCreateDevice}, " +
+                $"CanSubscribeGaze={capabilities.CanSubscribeGaze}, " +
+                $"HasWaitForCallbacks={capabilities.HasWaitForCallbacks}");
+
+            return true;
         }
 
-        private T Bind<T>(string procName) where T : class
+        /// <summary>
+        /// Safely attempt to bind a native export. Returns null if the export is not found.
+        /// Only GetProcAddress is called; no native function is executed.
+        /// </summary>
+        private T TryBind<T>(string procName, List<string> missingList, bool isRequired) where T : class
         {
             IntPtr proc = GetProcAddress(moduleHandle, procName);
             if (proc == IntPtr.Zero)
             {
-                throw new EntryPointNotFoundException($"Tobii Stream Engine entry point '{procName}' was not found.");
+                missingList.Add(procName);
+                if (isRequired)
+                {
+                    logger.Warn($"Required Tobii export not found: {procName}");
+                }
+                else
+                {
+                    logger.Debug($"Optional Tobii export not found: {procName}");
+                }
+                return null;
             }
+
+            logger.Debug($"Bound Tobii export: {procName}");
             return Marshal.GetDelegateForFunctionPointer(proc, typeof(T)) as T;
         }
 
+        #region Public API methods (guard against null delegates)
+
         public tobii_error_t ApiCreate(out IntPtr api)
         {
-            EnsureLoaded();
+            EnsureExport(fn_tobii_api_create, "tobii_api_create");
             return fn_tobii_api_create(out api, IntPtr.Zero, IntPtr.Zero);
         }
 
         public tobii_error_t ApiDestroy(IntPtr api)
         {
             if (!IsLoaded || api == IntPtr.Zero) return tobii_error_t.TOBII_ERROR_NO_ERROR;
+            if (fn_tobii_api_destroy == null) return tobii_error_t.TOBII_ERROR_NOT_AVAILABLE;
             return fn_tobii_api_destroy(api);
         }
 
         public tobii_error_t EnumerateDeviceUrls(IntPtr api, out List<string> urls)
         {
-            EnsureLoaded();
+            EnsureExport(fn_tobii_enumerate_local_device_urls, "tobii_enumerate_local_device_urls");
             var list = new List<string>();
             tobii_device_url_receiver_t receiver = (url, data) =>
             {
@@ -221,7 +313,7 @@ namespace OptiKey.ET5.Plugin.Runtime
 
         public tobii_error_t DeviceCreate(IntPtr api, string url, out IntPtr device)
         {
-            EnsureLoaded();
+            EnsureExport(fn_tobii_device_create, "tobii_device_create");
             // Strictly enforce TOBII_FIELD_OF_USE_INTERACTIVE (ADR-004)
             return fn_tobii_device_create(api, url, tobii_field_of_use_t.TOBII_FIELD_OF_USE_INTERACTIVE, out device);
         }
@@ -229,36 +321,51 @@ namespace OptiKey.ET5.Plugin.Runtime
         public tobii_error_t DeviceDestroy(IntPtr device)
         {
             if (!IsLoaded || device == IntPtr.Zero) return tobii_error_t.TOBII_ERROR_NO_ERROR;
+            if (fn_tobii_device_destroy == null) return tobii_error_t.TOBII_ERROR_NOT_AVAILABLE;
             return fn_tobii_device_destroy(device);
         }
 
         public tobii_error_t DeviceReconnect(IntPtr device)
         {
+            if (fn_tobii_device_reconnect == null)
+            {
+                logger.Debug("tobii_device_reconnect is not available in this runtime.");
+                return tobii_error_t.TOBII_ERROR_NOT_SUPPORTED;
+            }
             EnsureLoaded();
             return fn_tobii_device_reconnect(device);
         }
 
         public tobii_error_t WaitForCallbacks(IntPtr[] devices)
         {
+            if (fn_tobii_wait_for_callbacks == null)
+            {
+                return tobii_error_t.TOBII_ERROR_NOT_SUPPORTED;
+            }
             EnsureLoaded();
             return fn_tobii_wait_for_callbacks((IntPtr)devices.Length, devices);
         }
 
         public tobii_error_t ProcessCallbacks(IntPtr device)
         {
+            if (fn_tobii_device_process_callbacks == null)
+            {
+                return tobii_error_t.TOBII_ERROR_NOT_SUPPORTED;
+            }
             EnsureLoaded();
             return fn_tobii_device_process_callbacks(device);
         }
 
         public tobii_error_t GazePointSubscribe(IntPtr device, tobii_gaze_point_callback_t callback)
         {
-            EnsureLoaded();
+            EnsureExport(fn_tobii_gaze_point_subscribe, "tobii_gaze_point_subscribe");
             return fn_tobii_gaze_point_subscribe(device, callback, IntPtr.Zero);
         }
 
         public tobii_error_t GazePointUnsubscribe(IntPtr device)
         {
-            EnsureLoaded();
+            if (!IsLoaded || fn_tobii_gaze_point_unsubscribe == null)
+                return tobii_error_t.TOBII_ERROR_NO_ERROR;
             return fn_tobii_gaze_point_unsubscribe(device);
         }
 
@@ -276,6 +383,8 @@ namespace OptiKey.ET5.Plugin.Runtime
             }
         }
 
+        #endregion
+
         private void EnsureLoaded()
         {
             if (!IsLoaded)
@@ -284,8 +393,35 @@ namespace OptiKey.ET5.Plugin.Runtime
             }
         }
 
+        private void EnsureExport(object delegateInstance, string exportName)
+        {
+            EnsureLoaded();
+            if (delegateInstance == null)
+            {
+                throw new Core.ET5PluginException(
+                    Core.ET5ErrorCode.RequiredExportMissing,
+                    "The installed Tobii software is missing required functionality.",
+                    $"Required export '{exportName}' was not bound.");
+            }
+        }
+
         public void Dispose()
         {
+            capabilities = null;
+
+            // Clear all delegate references before freeing the module
+            fn_tobii_api_create = null;
+            fn_tobii_api_destroy = null;
+            fn_tobii_enumerate_local_device_urls = null;
+            fn_tobii_device_create = null;
+            fn_tobii_device_destroy = null;
+            fn_tobii_device_reconnect = null;
+            fn_tobii_wait_for_callbacks = null;
+            fn_tobii_device_process_callbacks = null;
+            fn_tobii_gaze_point_subscribe = null;
+            fn_tobii_gaze_point_unsubscribe = null;
+            fn_tobii_error_message = null;
+
             if (moduleHandle != IntPtr.Zero)
             {
                 FreeLibrary(moduleHandle);
