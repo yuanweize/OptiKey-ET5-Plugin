@@ -7,7 +7,7 @@
 - [x] GPL-3.0-only License, Security, Privacy, and Code of Conduct policies.
 - [x] Upstream contract reference pinning (`OPTIKEY_CONTRACT_REF`).
 - [x] Comprehensive Architectural Decision Records (ADR-001 through ADR-007).
-- [x] Legal notice (`LEGAL.md`) and runtime research deliverable (`docs/RUNTIME_RESEARCH.md`).
+- [x] Legal notice ([`LEGAL.md`](../policies/LEGAL.md)) and runtime research deliverable ([`RUNTIME_RESEARCH.md`](../research/RUNTIME_RESEARCH.md)).
 - [x] Dual-target Windows CI workflow setup.
 
 ## Phase 2: Plugin Skeleton & State Machine

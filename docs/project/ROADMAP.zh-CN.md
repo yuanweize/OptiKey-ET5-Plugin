@@ -7,7 +7,7 @@
 - [x] 确立 GPL-3.0-only 开源协议、安全策略、隐私声明与行为准则。
 - [x] 建立上游契约锁定机制（`OPTIKEY_CONTRACT_REF`）。
 - [x] 撰写系统性架构决策记录（ADR-001 至 ADR-009）。
-- [x] 编写法律声明（`LEGAL.md`）与运行时研究报告。
+- [x] 编写法律声明（[`LEGAL.md`](../policies/LEGAL.zh-CN.md)）与运行时研究报告（[`RUNTIME_RESEARCH.md`](../research/RUNTIME_RESEARCH.zh-CN.md)）。
 - [x] 搭建双矩阵 Windows CI 工作流流水线。
 
 ## 第二阶段：插件骨架与状态机实现 (已完成)

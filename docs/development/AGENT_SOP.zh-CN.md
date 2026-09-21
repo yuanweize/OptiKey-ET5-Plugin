@@ -7,9 +7,9 @@
 ## 1. 操作前提与分支规范
 
 1. **优先通读核心规范**：
-   - 检查仓库根目录的 [`AGENTS.md`](../AGENTS.md)。
-   - 了解 [`docs/DOCUMENTATION_POLICY.zh-CN.md`](DOCUMENTATION_POLICY.zh-CN.md) 双语对齐要求。
-   - 检索 [`docs/adr/`](adr/) 下的历史架构决策记录（ADR）。
+   - 检查仓库根目录的 [`AGENTS.zh-CN.md`](../../AGENTS.zh-CN.md)。
+   - 了解 [双语文档同步规范](DOCUMENTATION_POLICY.zh-CN.md)。
+   - 检索 [历史架构决策记录 (ADR)](../adr/)。
 2. **严禁直接向 `main` 提交代码**：
    - 始终确认当前分支状态（`git branch -avv`）。
    - 在专门的开发分支（如 `dev/...`）上工作。
@@ -54,6 +54,6 @@
 - [ ] Windows CI 矩阵全部通过。
 - [ ] CI 日志中无未处理异常。
 - [ ] 打包产物在 OptiKey 加载器冒烟测试中通过。
-- [ ] 双语 `CHANGELOG.md` 和 `STATUS.md` 已更新。
+- [ ] 双语 `CHANGELOG.md` 和 [`STATUS.zh-CN.md`](../project/STATUS.zh-CN.md) 已更新。
 - [ ] Release ZIP 包完整性审计通过（无专有组件混入）。
 - [ ] 遵循语义化版本号（首个公开发布必须为 `v0.1.0`）。

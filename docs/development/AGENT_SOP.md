@@ -7,9 +7,9 @@ This document prescribes the mandatory operating procedures for any autonomous a
 ## 1. Operating Prerequisites
 
 1. **Read Core Governance First**:
-   - Inspect [`AGENTS.md`](../AGENTS.md) at the repository root.
-   - Review [`docs/DOCUMENTATION_POLICY.md`](DOCUMENTATION_POLICY.md).
-   - Review architectural decisions under [`docs/adr/`](adr/).
+   - Inspect [`AGENTS.md`](../../AGENTS.md) at the repository root.
+   - Review [Documentation Synchronization Policy](DOCUMENTATION_POLICY.md).
+   - Review architectural decisions under [Architecture Decision Records](../adr/).
 2. **Never Commit Directly to `main`**:
    - Always verify current branch state (`git branch -avv`).
    - Use dedicated development branches (`dev/...`).
@@ -54,6 +54,6 @@ Before tagging or creating a GitHub Release:
 - [ ] Full Windows CI matrix passed.
 - [ ] No unhandled exceptions in CI logs.
 - [ ] Packaged loader smoke test passed.
-- [ ] Bilingual `CHANGELOG.md` and `STATUS.md` updated.
+- [ ] Bilingual `CHANGELOG.md` and [`STATUS.md`](../project/STATUS.md) updated.
 - [ ] Release ZIP integrity verified (no proprietary DLLs).
 - [ ] Semantic versioning strictly followed (`v0.1.0` for initial public release).
