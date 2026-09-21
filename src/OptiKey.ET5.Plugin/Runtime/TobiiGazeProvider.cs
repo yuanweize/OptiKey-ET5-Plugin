@@ -104,6 +104,10 @@ namespace OptiKey.ET5.Plugin.Runtime
 
         public void Stop()
         {
+            Thread threadToJoin = null;
+            CancellationTokenSource ctsToCancel = null;
+            ICallbackPump pumpToStop = null;
+
             lock (lifecycleLock)
             {
                 if (stateMachine.CurrentState == GazeServiceState.Disposed || stateMachine.CurrentState == GazeServiceState.Stopped)
@@ -114,29 +118,57 @@ namespace OptiKey.ET5.Plugin.Runtime
                 logger.Info("Stopping Tobii gaze provider...");
                 stateMachine.TryTransition(GazeServiceState.Stopping);
 
-                if (cts != null)
+                ctsToCancel = cts;
+                cts = null;
+
+                pumpToStop = callbackPump;
+                callbackPump = null;
+
+                threadToJoin = workerThread;
+                workerThread = null;
+            }
+
+            if (ctsToCancel != null)
+            {
+                try { ctsToCancel.Cancel(); } catch (ObjectDisposedException) { }
+            }
+
+            if (pumpToStop != null)
+            {
+                try
                 {
-                    try { cts.Cancel(); } catch (ObjectDisposedException) { }
+                    pumpToStop.RequestStop();
+                    pumpToStop.Join(TimeSpan.FromMilliseconds(Math.Min(stopTimeout.TotalMilliseconds, 200)));
                 }
-
-                StopCallbackPump();
-
-                if (workerThread != null && workerThread.IsAlive && workerThread != Thread.CurrentThread)
+                catch (Exception ex)
                 {
-                    bool joined = workerThread.Join(stopTimeout);
-                    if (!joined)
-                    {
-                        logger.Error(
-                            $"CRITICAL: Worker thread did not terminate within {stopTimeout.TotalSeconds:F1}s. " +
-                            "Native thread is potentially stuck in tobii_wait_for_callbacks. " +
-                            "Aborting native handle cleanup to prevent use-after-free.");
+                    logger.Warn($"Exception while stopping callback pump: {ex.Message}");
+                }
+                finally
+                {
+                    try { pumpToStop.Dispose(); } catch { }
+                }
+            }
 
-                        stateMachine.TryTransition(GazeServiceState.Stopped,
-                            new GazeServiceError("STUCK_WORKER", "Worker thread failed to terminate during Stop()."));
-                        ConnectionStatusChanged?.Invoke(this, false);
-                        return;
-                    }
-                    workerThread = null;
+            bool joined = true;
+            if (threadToJoin != null && threadToJoin.IsAlive && threadToJoin != Thread.CurrentThread)
+            {
+                joined = threadToJoin.Join(stopTimeout);
+            }
+
+            lock (lifecycleLock)
+            {
+                if (!joined)
+                {
+                    logger.Error(
+                        $"CRITICAL: Worker thread did not terminate within {stopTimeout.TotalSeconds:F1}s. " +
+                        "Native thread is potentially stuck in tobii_wait_for_callbacks. " +
+                        "Aborting native handle cleanup to prevent use-after-free.");
+
+                    stateMachine.TryTransition(GazeServiceState.Stopped,
+                        new GazeServiceError("STUCK_WORKER", "Worker thread failed to terminate during Stop()."));
+                    ConnectionStatusChanged?.Invoke(this, false);
+                    return;
                 }
 
                 try
@@ -387,7 +419,12 @@ namespace OptiKey.ET5.Plugin.Runtime
                     logger.Info("Using explicitly configured device URL.");
                     return configuration.PreferredDeviceUrl;
                 }
-                logger.Warn("Configured PreferredDeviceUrl was not found in enumerated devices.");
+                logger.Error("Configured PreferredDeviceUrl was not found in enumerated devices.");
+                ErrorOccurred?.Invoke(this, new ET5PluginException(
+                    ET5ErrorCode.DeviceNotFound,
+                    "Specified device URL was not found.",
+                    $"Enumerated {deviceUrls.Count} devices."));
+                return null;
             }
 
             if (configuration.PreferredDeviceIndex.HasValue)
@@ -407,8 +444,8 @@ namespace OptiKey.ET5.Plugin.Runtime
                 return null;
             }
 
-            // Priority 2: Exactly ONE candidate exists and AutomaticDeviceSelection is enabled (DEFAULT)
-            if (deviceUrls.Count == 1 && configuration.AutomaticDeviceSelection)
+            // Priority 2: Exactly ONE candidate exists and AutomaticDeviceSelection (or AllowUnverifiedTobiiDevice) is enabled
+            if (deviceUrls.Count == 1 && (configuration.AutomaticDeviceSelection || configuration.AllowUnverifiedTobiiDevice))
             {
                 logger.Info("Single Tobii device candidate detected and plugin selected by user; automatically binding.");
                 return deviceUrls[0];
@@ -427,7 +464,7 @@ namespace OptiKey.ET5.Plugin.Runtime
                 return null;
             }
 
-            // Priority 4: Single candidate but AutomaticDeviceSelection was explicitly disabled
+            // Priority 4: Single candidate but automatic selection and developer override are disabled
             logger.Warn("Automatic device selection is disabled and no explicit device was configured; refusing connection.");
             ErrorOccurred?.Invoke(this, ET5PluginException.DeviceIdentityUnknown());
             return null;
@@ -489,8 +526,17 @@ namespace OptiKey.ET5.Plugin.Runtime
                 {
                     return;
                 }
+            }
 
-                Stop();
+            Stop();
+
+            lock (lifecycleLock)
+            {
+                if (stateMachine.CurrentState == GazeServiceState.Disposed)
+                {
+                    return;
+                }
+
                 stateMachine.ForceDisposed();
 
                 var oldCts = cts;

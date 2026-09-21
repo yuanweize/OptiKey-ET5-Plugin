@@ -74,18 +74,15 @@ namespace OptiKey.ET5.Plugin.Core
         public string PreferredDeviceUrl { get; set; }
 
         /// <summary>
-        /// Alias for backwards compatibility with developer test scripts.
-        /// Maps directly to AutomaticDeviceSelection.
+        /// Developer mode flag (ADR-007). Default is false (Strict Mode).
+        /// When true, allows developer overrides even if device identity is unverified.
         /// </summary>
-        public bool AllowUnverifiedTobiiDevice
-        {
-            get => AutomaticDeviceSelection;
-            set => AutomaticDeviceSelection = value;
-        }
+        public bool AllowUnverifiedTobiiDevice { get; set; } = false;
 
         public PluginConfiguration()
         {
             AutomaticDeviceSelection = true;
+            AllowUnverifiedTobiiDevice = false;
             CallbackStrategy = CallbackStrategy.Polling;
             PollIntervalMs = 5;
             PreferredDeviceIndex = null;
@@ -128,18 +125,21 @@ namespace OptiKey.ET5.Plugin.Core
             try
             {
                 string autoSelect = Environment.GetEnvironmentVariable("ET5_AUTOMATIC_DEVICE_SELECTION");
-                if (string.IsNullOrEmpty(autoSelect))
-                {
-                    // Fallback to legacy developer mode env var
-                    autoSelect = Environment.GetEnvironmentVariable("ET5_ALLOW_UNVERIFIED_DEVICE");
-                }
-
                 if (!string.IsNullOrEmpty(autoSelect))
                 {
                     config.AutomaticDeviceSelection =
                         autoSelect.Equals("1", StringComparison.Ordinal) ||
                         autoSelect.Equals("true", StringComparison.OrdinalIgnoreCase);
                     logger.Debug($"ET5_AUTOMATIC_DEVICE_SELECTION set from environment: {config.AutomaticDeviceSelection}");
+                }
+
+                string allowUnverified = Environment.GetEnvironmentVariable("ET5_ALLOW_UNVERIFIED_DEVICE");
+                if (!string.IsNullOrEmpty(allowUnverified))
+                {
+                    config.AllowUnverifiedTobiiDevice =
+                        allowUnverified.Equals("1", StringComparison.Ordinal) ||
+                        allowUnverified.Equals("true", StringComparison.OrdinalIgnoreCase);
+                    logger.Debug($"ET5_ALLOW_UNVERIFIED_DEVICE set from environment: {config.AllowUnverifiedTobiiDevice}");
                 }
 
                 string strategyStr = Environment.GetEnvironmentVariable("ET5_CALLBACK_STRATEGY");
@@ -232,8 +232,13 @@ namespace OptiKey.ET5.Plugin.Core
                     switch (key.ToLowerInvariant())
                     {
                         case "automaticdeviceselection":
-                        case "allowunverifiedtobiidevice":
                             config.AutomaticDeviceSelection =
+                                value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                                value.Equals("1", StringComparison.Ordinal);
+                            break;
+
+                        case "allowunverifiedtobiidevice":
+                            config.AllowUnverifiedTobiiDevice =
                                 value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
                                 value.Equals("1", StringComparison.Ordinal);
                             break;

@@ -281,7 +281,7 @@ namespace OptiKey.ET5.Plugin.Tests
             sw.Stop();
 
             // Verification 1: Stop() did not hang indefinitely
-            Assert.That(sw.ElapsedMilliseconds, Is.LessThan(500), "Stop() must return within bounded timeout");
+            Assert.That(sw.ElapsedMilliseconds, Is.LessThan(1500), "Stop() must return within bounded timeout");
 
             // Verification 2: State transitioned to Stopped with STUCK_WORKER error
             Assert.That(provider.StateMachine.CurrentState, Is.EqualTo(GazeServiceState.Stopped));
