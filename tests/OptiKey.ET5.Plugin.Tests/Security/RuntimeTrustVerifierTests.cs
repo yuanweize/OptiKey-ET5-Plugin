@@ -275,6 +275,50 @@ namespace OptiKey.ET5.Plugin.Tests
             Assert.IsFalse(result.IsFound, "Must reject candidate whose certificate has been revoked.");
         }
 
+        [Test]
+        public void TobiiRuntimeLocator_RejectsCandidateIfCertificateRevokedWithCertERevoked_EvenIfSignatureValidAndSignerMatchesTobii()
+        {
+            // SEC-01: Explicitly revoked certificate (CERT_E_REVOKED) must NEVER be accepted
+            string fakeDll = Path.Combine(tempDir, "tobii_stream_engine.dll");
+            CreateSyntheticPe64(fakeDll);
+
+            var discovery = new CompositeRuntimeDiscovery(new[] { new SimpleDiscoverySource(fakeDll) });
+            var fakeVerifier = new FakeTrustVerifier(new RuntimeTrustResult(
+                SignatureStatus.Valid,
+                ChainStatus.Revoked,
+                "CN=Tobii AB",
+                signerMatchesTobii: true,
+                winVerifyTrustResultCode: unchecked((int)0x800B010C), // CERT_E_REVOKED
+                diagnosticMessage: "Certificate revoked."));
+
+            var locator = new TobiiRuntimeLocator(discovery: discovery, trustVerifier: fakeVerifier);
+            var result = locator.LocateRuntime();
+
+            Assert.IsFalse(result.IsFound, "Must reject candidate whose certificate has been revoked via CERT_E_REVOKED.");
+        }
+
+        [Test]
+        public void TobiiRuntimeLocator_RejectsCandidateIfWinVerifyTrustReturnsUnknownErrorCode_EvenIfSignerMatchesTobii()
+        {
+            // SEC-01 / Fail-closed: An unknown non-zero WinVerifyTrust error code must result in SignatureStatus.Error and rejection
+            string fakeDll = Path.Combine(tempDir, "tobii_stream_engine.dll");
+            CreateSyntheticPe64(fakeDll);
+
+            var discovery = new CompositeRuntimeDiscovery(new[] { new SimpleDiscoverySource(fakeDll) });
+            var fakeVerifier = new FakeTrustVerifier(new RuntimeTrustResult(
+                SignatureStatus.Error,
+                ChainStatus.UntrustedRoot,
+                "CN=Tobii AB",
+                signerMatchesTobii: true,
+                winVerifyTrustResultCode: unchecked((int)0x80092004), // CRYPT_E_NOT_FOUND
+                diagnosticMessage: "Unknown verification error."));
+
+            var locator = new TobiiRuntimeLocator(discovery: discovery, trustVerifier: fakeVerifier);
+            var result = locator.LocateRuntime();
+
+            Assert.IsFalse(result.IsFound, "Must reject candidate when WinVerifyTrust encounters an unhandled error code.");
+        }
+
         private static void CreateSyntheticPe64(string filePath)
         {
             using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))

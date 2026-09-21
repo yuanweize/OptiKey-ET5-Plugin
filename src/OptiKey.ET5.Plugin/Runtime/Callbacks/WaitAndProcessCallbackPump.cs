@@ -237,13 +237,25 @@ namespace OptiKey.ET5.Plugin.Runtime
                 RequestStop();
                 threadToJoin = workerThread;
                 workerThread = null;
-                state = CallbackPumpState.Disposed;
             }
 
             // Invariant: Never hold stateLock while joining the worker thread (CONC-01)
             if (threadToJoin != null && threadToJoin.IsAlive && threadToJoin != Thread.CurrentThread)
             {
                 threadToJoin.Join(TimeSpan.FromMilliseconds(500));
+            }
+
+            lock (stateLock)
+            {
+                if (threadToJoin == null || !threadToJoin.IsAlive)
+                {
+                    state = CallbackPumpState.Disposed;
+                }
+                else
+                {
+                    state = CallbackPumpState.TimedOut;
+                    logger?.Warn("Worker thread did not terminate within dispose timeout in WaitAndProcessCallbackPump.");
+                }
             }
         }
     }
