@@ -68,7 +68,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: OptiKey-ET5-Plugin-TestResults-${{ matrix.contracts_target }}
-          path: artifacts/test-results/OptiKey.ET5.Plugin.Tests.trx
+          path: |
+            artifacts/test-results/OptiKey.ET5.Plugin.Tests.trx
+            artifacts/test-results/vstest-output.log
 
       - name: Package Release ZIP & Audit Integrity
         if: matrix.contracts_target == 'pinned-stable'
