@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -76,6 +77,11 @@ namespace OptiKey.ET5.Plugin.PackagedLoaderHarness
                         throw new InvalidOperationException("Activator.CreateInstance returned null.");
                     }
 
+                    if (IsTobiiRuntimeLoaded())
+                    {
+                        throw new InvalidOperationException("Constructor loaded tobii_stream_engine.dll unexpectedly.");
+                    }
+
                     try
                     {
                         if (!(instance is IDisposable))
@@ -131,6 +137,12 @@ namespace OptiKey.ET5.Plugin.PackagedLoaderHarness
             }
 
             return null;
+        }
+
+        private static bool IsTobiiRuntimeLoaded()
+        {
+            return Process.GetCurrentProcess().Modules.Cast<ProcessModule>()
+                .Any(module => string.Equals(module.ModuleName, "tobii_stream_engine.dll", StringComparison.OrdinalIgnoreCase));
         }
 
         private static void RequireFile(string path, string description)
