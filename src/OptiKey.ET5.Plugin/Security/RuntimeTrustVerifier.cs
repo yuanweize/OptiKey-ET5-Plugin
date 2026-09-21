@@ -138,8 +138,8 @@ namespace OptiKey.ET5.Plugin.Security
                             break;
 
                         default:
-                            sigStatus = SignatureStatus.Error;
-                            chainStatus = ChainStatus.UntrustedRoot;
+                            sigStatus = (signerSubject != null) ? SignatureStatus.Error : SignatureStatus.Unsigned;
+                            chainStatus = (signerSubject != null) ? ChainStatus.UntrustedRoot : ChainStatus.NotApplicable;
                             diagMsg = $"WinVerifyTrust returned non-zero code: 0x{result:X8}";
                             break;
                     }
