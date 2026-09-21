@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using OptiKey.ET5.Plugin.Diagnostics;
+using OptiKey.ET5.Plugin.Runtime.Discovery;
+using OptiKey.ET5.Plugin.Security;
 
 namespace OptiKey.ET5.Plugin.Runtime
 {
@@ -11,9 +13,12 @@ namespace OptiKey.ET5.Plugin.Runtime
         public bool IsFound { get; }
         public string LibraryPath { get; }
         public bool IsArchitectureValid { get; }
+        public bool IsArchValid => IsArchitectureValid;
         public bool IsSignerMetadataAccepted { get; }
+        public bool IsSigVerified => IsSignerMetadataAccepted;
         public string Publisher { get; }
         public string FailureReason { get; }
+        public RuntimeTrustResult TrustResult { get; }
 
         public RuntimeLocatorResult(
             bool isFound,
@@ -21,7 +26,8 @@ namespace OptiKey.ET5.Plugin.Runtime
             bool isArchValid,
             bool isSigVerified,
             string publisher,
-            string failureReason = null)
+            string failureReason = null,
+            RuntimeTrustResult trustResult = null)
         {
             IsFound = isFound;
             LibraryPath = libraryPath;
@@ -29,11 +35,12 @@ namespace OptiKey.ET5.Plugin.Runtime
             IsSignerMetadataAccepted = isSigVerified;
             Publisher = publisher;
             FailureReason = failureReason;
+            TrustResult = trustResult;
         }
 
-        public static RuntimeLocatorResult Failed(string reason)
+        public static RuntimeLocatorResult Failed(string reason, RuntimeTrustResult trustResult = null)
         {
-            return new RuntimeLocatorResult(false, null, false, false, null, reason);
+            return new RuntimeLocatorResult(false, null, false, false, null, reason, trustResult);
         }
     }
 
@@ -51,11 +58,19 @@ namespace OptiKey.ET5.Plugin.Runtime
         private const ushort IMAGE_FILE_MACHINE_AMD64 = 0x8664;
         private readonly IPluginLogger logger;
         private readonly IEnumerable<string> customProbePaths;
+        private readonly CompositeRuntimeDiscovery discovery;
+        private readonly IRuntimeTrustVerifier trustVerifier;
 
-        public TobiiRuntimeLocator(IPluginLogger logger = null, IEnumerable<string> customProbePaths = null)
+        public TobiiRuntimeLocator(
+            IPluginLogger logger = null,
+            IEnumerable<string> customProbePaths = null,
+            CompositeRuntimeDiscovery discovery = null,
+            IRuntimeTrustVerifier trustVerifier = null)
         {
             this.logger = logger ?? new PluginLogger(typeof(TobiiRuntimeLocator));
             this.customProbePaths = customProbePaths;
+            this.discovery = discovery ?? CompositeRuntimeDiscovery.CreateDefault(customProbePaths, this.logger);
+            this.trustVerifier = trustVerifier ?? new RuntimeTrustVerifier(this.logger);
         }
 
         public RuntimeLocatorResult LocateRuntime()
@@ -78,21 +93,29 @@ namespace OptiKey.ET5.Plugin.Runtime
                     continue;
                 }
 
-                // 2. Inspect signer metadata; this is not Authenticode trust validation.
-                bool signerMetadataAccepted = InspectSignerMetadata(path, out string publisher);
-                if (!signerMetadataAccepted)
+                // 2. Cryptographic Authenticode & Signer Verification (Phase H)
+                var trustResult = trustVerifier.VerifyFileTrust(path);
+                if (!trustResult.SignerMatchesTobii)
                 {
-                    logger.Warn($"Candidate rejected: Tobii signer metadata was not accepted for: {path}");
+                    logger.Warn($"Candidate rejected: Tobii signer verification failed: {path}. " +
+                        $"Subject='{trustResult.SignerSubject ?? "None"}', Status={trustResult.SignatureStatus}");
                     continue;
                 }
 
-                logger.Info($"Located Tobii runtime candidate after PE and signer metadata checks: {path} (Publisher: {publisher ?? "Unknown"})");
+                if (trustResult.ChainStatus != ChainStatus.Trusted)
+                {
+                    logger.Warn($"Notice: Binary signature is valid but certificate chain is {trustResult.ChainStatus}: {path}");
+                }
+
+                logger.Info($"Located Tobii runtime candidate: {path} (Publisher: {trustResult.SignerSubject ?? "Unknown"}, Chain: {trustResult.ChainStatus})");
                 return new RuntimeLocatorResult(
                     isFound: true,
                     libraryPath: path,
                     isArchValid: true,
-                    isSigVerified: signerMetadataAccepted,
-                    publisher: publisher);
+                    isSigVerified: trustResult.SignerMatchesTobii,
+                    publisher: trustResult.SignerSubject,
+                    failureReason: null,
+                    trustResult: trustResult);
             }
 
             string failure = "Tobii Experience runtime (tobii_stream_engine.dll) was not found in standard system locations.";
@@ -102,25 +125,7 @@ namespace OptiKey.ET5.Plugin.Runtime
 
         public IEnumerable<string> GetCandidateProbePaths()
         {
-            var paths = new List<string>();
-
-            if (customProbePaths != null)
-            {
-                paths.AddRange(customProbePaths);
-            }
-
-            string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            string programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-
-            // Whitelist of legitimate Tobii installation directories
-            paths.Add(Path.Combine(programFiles, @"Tobii\Tobii Service\tobii_stream_engine.dll"));
-            paths.Add(Path.Combine(programFiles, @"Tobii\Tobii Eye Tracker 5\tobii_stream_engine.dll"));
-            paths.Add(Path.Combine(programFiles, @"Tobii\Tobii EyeX Config\tobii_stream_engine.dll"));
-            paths.Add(Path.Combine(programFilesX86, @"Tobii\Tobii Eye Tracker 5\x64\tobii_stream_engine.dll"));
-            paths.Add(Path.Combine(localAppData, @"Programs\Tobii\Tobii Eye Tracker 5\tobii_stream_engine.dll"));
-
-            return paths;
+            return discovery.DiscoverAllCandidates();
         }
 
         public static bool VerifyPe64Architecture(string filePath)

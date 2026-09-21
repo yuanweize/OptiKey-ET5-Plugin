@@ -13,8 +13,13 @@ if (-not (Test-Path -LiteralPath $TestProject)) {
 }
 New-Item -ItemType Directory -Path $ResultsDirectory -Force | Out-Null
 $trxPath = Join-Path $ResultsDirectory "OptiKey.ET5.Plugin.Tests.trx"
+$testLogPath = Join-Path $ResultsDirectory "vstest-output.log"
+
 if (Test-Path -LiteralPath $trxPath) {
     Remove-Item -LiteralPath $trxPath -Force
+}
+if (Test-Path -LiteralPath $testLogPath) {
+    Remove-Item -LiteralPath $testLogPath -Force
 }
 
 Write-Host "Running test project: $TestProject"
@@ -37,12 +42,36 @@ if ($null -eq $adapter) {
 }
 
 Write-Host "Executing test assembly with adapter: $($testDll.FullName) / $($adapter.FullName)"
-& vstest.console.exe $testDll.FullName /Platform:$Platform /TestAdapterPath:$($adapter.DirectoryName) "/Logger:trx;LogFileName=OptiKey.ET5.Plugin.Tests.trx" "/ResultsDirectory:$ResultsDirectory"
-if ($LASTEXITCODE -ne 0) {
-    throw "vstest.console.exe failed with exit code $LASTEXITCODE."
+
+# Execute vstest and stream output to both console and log file for post-test crash auditing
+& vstest.console.exe $testDll.FullName /Platform:$Platform /TestAdapterPath:$($adapter.DirectoryName) "/Logger:trx;LogFileName=OptiKey.ET5.Plugin.Tests.trx" "/ResultsDirectory:$ResultsDirectory" *>&1 | Tee-Object -FilePath $testLogPath
+
+$exitCode = $LASTEXITCODE
+if ($exitCode -ne 0) {
+    throw "vstest.console.exe failed with exit code $exitCode."
 }
 if (-not (Test-Path -LiteralPath $trxPath)) {
     throw "dotnet test did not produce the expected TRX file: $trxPath"
+}
+
+# PHASE 2 AUDIT GATE: Fail CI on unhandled background thread exceptions or fatal native crashes
+$fatalIndicators = @(
+    "Unhandled Exception:",
+    "Fatal error",
+    "AccessViolationException"
+)
+
+if (Test-Path -LiteralPath $testLogPath) {
+    $logContent = Get-Content -LiteralPath $testLogPath -Raw
+    foreach ($indicator in $fatalIndicators) {
+        if ($logContent -match [regex]::Escape($indicator)) {
+            Write-Error "CI Process Failure Gate: Test log contains fatal process indicator: '$indicator'."
+            Write-Host "=================== CRASH EXCERPT ===================" -ForegroundColor Red
+            $logContent -split "`r?`n" | Select-String -Pattern [regex]::Escape($indicator) -Context 3, 7 | Out-String | Write-Host
+            Write-Host "=====================================================" -ForegroundColor Red
+            throw "Test run failed audit gate: unexpected unhandled background exception detected ('$indicator')."
+        }
+    }
 }
 
 [xml]$trx = Get-Content -LiteralPath $trxPath

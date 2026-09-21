@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using OptiKey.ET5.Plugin.Core;
 using OptiKey.ET5.Plugin.Diagnostics;
 
 namespace OptiKey.ET5.Plugin.Runtime
 {
     /// <summary>
     /// Default implementation of ITobiiRuntime binding to physical Tobii Stream Engine DLL.
+    /// Propagates typed ET5PluginException errors through the error model.
     /// </summary>
     public class TobiiNativeRuntime : ITobiiRuntime
     {
@@ -27,6 +29,11 @@ namespace OptiKey.ET5.Plugin.Runtime
             this.binding = new TobiiStreamEngineBinding(this.logger);
         }
 
+        /// <summary>
+        /// The runtime capabilities discovered after loading. Null if not initialized.
+        /// </summary>
+        public RuntimeCapabilities Capabilities => binding.Capabilities;
+
         public bool Initialize()
         {
             lock (syncLock)
@@ -45,6 +52,13 @@ namespace OptiKey.ET5.Plugin.Runtime
 
                 if (!binding.Load(locateResult.LibraryPath))
                 {
+                    return false;
+                }
+
+                // Verify core API capability is available
+                if (!binding.Capabilities.CanCreateApi)
+                {
+                    logger.Error("Runtime loaded but lacks core API exports.");
                     return false;
                 }
 
@@ -137,6 +151,12 @@ namespace OptiKey.ET5.Plugin.Runtime
             {
                 if (deviceContext == IntPtr.Zero)
                 {
+                    return false;
+                }
+
+                if (binding.Capabilities != null && !binding.Capabilities.CanSubscribeGaze)
+                {
+                    logger.Error("Runtime does not have gaze subscription capability.");
                     return false;
                 }
 

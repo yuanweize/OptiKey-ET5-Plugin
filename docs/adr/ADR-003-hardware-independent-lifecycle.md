@@ -1,3 +1,5 @@
+[English](ADR-003-hardware-independent-lifecycle.md) | [简体中文](ADR-003-hardware-independent-lifecycle.zh-CN.md)
+
 # ADR-003: Hardware-Independent Lifecycle and Lazy Activation
 
 ## Status

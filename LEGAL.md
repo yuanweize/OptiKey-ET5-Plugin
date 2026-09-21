@@ -1,3 +1,5 @@
+[English](LEGAL.md) | [简体中文](LEGAL.zh-CN.md)
+
 # Legal Notice and Licensing Provenance
 
 > **Document Status**: Active  

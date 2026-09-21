@@ -1,3 +1,5 @@
+[English](RUNTIME_RESEARCH.md) | [简体中文](RUNTIME_RESEARCH.zh-CN.md)
+
 # Runtime Research and Tobii Integration Specification
 
 > **Document Status**: Partially verified; hardware, installation layout, and legal compatibility remain unverified

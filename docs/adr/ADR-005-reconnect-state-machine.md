@@ -1,3 +1,5 @@
+[English](ADR-005-reconnect-state-machine.md) | [简体中文](ADR-005-reconnect-state-machine.zh-CN.md)
+
 # ADR-005: Reconnect State Machine and Callback Lifecycle
 
 ## Status

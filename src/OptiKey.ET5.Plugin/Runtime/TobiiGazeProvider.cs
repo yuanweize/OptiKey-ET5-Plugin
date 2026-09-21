@@ -9,6 +9,13 @@ namespace OptiKey.ET5.Plugin.Runtime
 {
     /// <summary>
     /// Production eye-gaze provider interfacing with Tobii hardware via ITobiiRuntime (ADR-005).
+    ///
+    /// Implements:
+    ///   - Single-device automatic binding for ordinary end-users.
+    ///   - Multi-device safety: strictly refuses silent auto-binding when multiple devices exist.
+    ///   - Integrated ICallbackPump lifecycle (Polling or WaitAndProcess).
+    ///   - Bounded shutdown lifecycle with stuck-worker isolation to prevent host crashes.
+    ///   - Generation-tracked worker threads to eliminate Start/Stop/Dispose races.
     /// </summary>
     public class TobiiGazeProvider : IGazeProvider
     {
@@ -16,11 +23,15 @@ namespace OptiKey.ET5.Plugin.Runtime
         private readonly IReconnectPolicy reconnectPolicy;
         private readonly IPluginLogger logger;
         private readonly GazeServiceStateMachine stateMachine;
+        private readonly Func<ITobiiRuntime, Action<tobii_error_t>, ICallbackPump> callbackPumpFactory;
 
+        private PluginConfiguration configuration;
         private Thread workerThread;
         private CancellationTokenSource cts;
+        private int lifecycleGeneration;
+        private ICallbackPump callbackPump;
         private readonly object lifecycleLock = new object();
-        private tobii_gaze_point_callback_t nativeGazeCallback; // Prevent GC collection of delegate
+        private readonly tobii_gaze_point_callback_t nativeGazeCallback; // Prevent GC collection of delegate
 
         public event EventHandler<GazePointEventArgs> GazePointAvailable;
         public event EventHandler<Exception> ErrorOccurred;
@@ -29,16 +40,27 @@ namespace OptiKey.ET5.Plugin.Runtime
         public bool IsConnected => stateMachine.CurrentState == GazeServiceState.Connected;
         public GazeServiceStateMachine StateMachine => stateMachine;
 
+        private readonly TimeSpan stopTimeout;
+
         public TobiiGazeProvider(
             ITobiiRuntime runtime = null,
             IReconnectPolicy reconnectPolicy = null,
             IPluginLogger logger = null,
-            GazeServiceStateMachine stateMachine = null)
+            GazeServiceStateMachine stateMachine = null,
+            PluginConfiguration configuration = null,
+            TimeSpan? stopTimeout = null,
+            Func<ITobiiRuntime, Action<tobii_error_t>, ICallbackPump> callbackPumpFactory = null)
         {
             this.logger = logger ?? new PluginLogger(typeof(TobiiGazeProvider));
             this.runtime = runtime ?? new TobiiNativeRuntime(logger: this.logger);
             this.reconnectPolicy = reconnectPolicy ?? new ExponentialBackoffReconnectPolicy();
             this.stateMachine = stateMachine ?? new GazeServiceStateMachine();
+            this.callbackPumpFactory = callbackPumpFactory;
+
+            // Configuration is loaded lazily on first Start() if not injected,
+            // to preserve the parameterless ET5PointService constructor contract.
+            this.configuration = configuration;
+            this.stopTimeout = stopTimeout ?? TimeSpan.FromSeconds(2);
 
             // Pin delegate to instance field to prevent unmanaged callback crash
             this.nativeGazeCallback = OnNativeGazePoint;
@@ -59,7 +81,15 @@ namespace OptiKey.ET5.Plugin.Runtime
                     return;
                 }
 
+                // Lazy configuration load (deferred from constructor)
+                if (configuration == null)
+                {
+                    configuration = PluginConfiguration.Load(logger);
+                }
+
+                int generation = ++lifecycleGeneration;
                 cts = new CancellationTokenSource();
+                var token = cts.Token;
                 stateMachine.TryTransition(GazeServiceState.Starting);
 
                 workerThread = new Thread(WorkerLoop)
@@ -67,13 +97,17 @@ namespace OptiKey.ET5.Plugin.Runtime
                     Name = "TobiiGazeProviderWorker",
                     IsBackground = true
                 };
-                workerThread.Start();
+                workerThread.Start(new WorkerParams { Token = token, Generation = generation });
                 logger.Info("Tobii gaze provider worker thread started.");
             }
         }
 
         public void Stop()
         {
+            Thread threadToJoin = null;
+            CancellationTokenSource ctsToCancel = null;
+            ICallbackPump pumpToStop = null;
+
             lock (lifecycleLock)
             {
                 if (stateMachine.CurrentState == GazeServiceState.Disposed || stateMachine.CurrentState == GazeServiceState.Stopped)
@@ -84,15 +118,66 @@ namespace OptiKey.ET5.Plugin.Runtime
                 logger.Info("Stopping Tobii gaze provider...");
                 stateMachine.TryTransition(GazeServiceState.Stopping);
 
-                if (cts != null)
-                {
-                    cts.Cancel();
-                }
+                ctsToCancel = cts;
+                cts = null;
 
-                if (workerThread != null && workerThread.IsAlive && workerThread != Thread.CurrentThread)
+                pumpToStop = callbackPump;
+                callbackPump = null;
+
+                threadToJoin = workerThread;
+                workerThread = null;
+            }
+
+            if (ctsToCancel != null)
+            {
+                try { ctsToCancel.Cancel(); } catch (ObjectDisposedException) { }
+            }
+
+            bool pumpClean = true;
+            if (pumpToStop != null)
+            {
+                try
                 {
-                    workerThread.Join();
-                    workerThread = null;
+                    pumpToStop.RequestStop();
+                    bool pumpJoined = pumpToStop.Join(TimeSpan.FromMilliseconds(Math.Min(stopTimeout.TotalMilliseconds, 200)));
+                    if (!pumpJoined || pumpToStop.State == CallbackPumpState.TimedOut)
+                    {
+                        pumpClean = false;
+                        logger.Warn("Callback pump timed out or did not stop cleanly.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.Warn($"Exception while stopping callback pump: {ex.Message}");
+                    pumpClean = false;
+                }
+                finally
+                {
+                    try { pumpToStop.Dispose(); } catch { }
+                }
+            }
+
+            bool workerJoined = true;
+            if (threadToJoin != null && threadToJoin.IsAlive && threadToJoin != Thread.CurrentThread)
+            {
+                workerJoined = threadToJoin.Join(stopTimeout);
+            }
+
+            bool cleanShutdown = pumpClean && workerJoined;
+
+            lock (lifecycleLock)
+            {
+                if (!cleanShutdown)
+                {
+                    logger.Error(
+                        $"CRITICAL: Worker thread or callback pump did not terminate within {stopTimeout.TotalSeconds:F1}s. " +
+                        "Native thread is potentially stuck in tobii_wait_for_callbacks. " +
+                        "Aborting native handle cleanup to prevent use-after-free.");
+
+                    stateMachine.TryTransition(GazeServiceState.Stopped,
+                        new GazeServiceError("STUCK_WORKER", "Worker thread or callback pump failed to terminate during Stop()."));
+                    ConnectionStatusChanged?.Invoke(this, false);
+                    return;
                 }
 
                 try
@@ -111,93 +196,182 @@ namespace OptiKey.ET5.Plugin.Runtime
             }
         }
 
-        private void WorkerLoop()
+        private void WorkerLoop(object state)
         {
+            var p = (WorkerParams)state;
+            var token = p.Token;
+            int generation = p.Generation;
             int reconnectAttempt = 0;
 
-            while (!cts.Token.IsCancellationRequested)
+            try
             {
-                try
+                while (!token.IsCancellationRequested && generation == this.lifecycleGeneration)
                 {
-                    if (stateMachine.CurrentState == GazeServiceState.Starting ||
-                        stateMachine.CurrentState == GazeServiceState.Reconnecting)
+                    try
                     {
-                        bool connected = TryEstablishConnection();
-                        if (connected)
+                        if (stateMachine.CurrentState == GazeServiceState.Starting ||
+                            stateMachine.CurrentState == GazeServiceState.Reconnecting)
                         {
-                            reconnectAttempt = 0;
-                            reconnectPolicy.Reset();
-                            stateMachine.TryTransition(GazeServiceState.Connected);
-                            ConnectionStatusChanged?.Invoke(this, true);
-                            logger.Info("Tobii Eye Tracker connected and streaming gaze points.");
+                            bool connected = TryEstablishConnection();
+                            if (connected)
+                            {
+                                reconnectAttempt = 0;
+                                reconnectPolicy.Reset();
+
+                                StartCallbackPump();
+
+                                stateMachine.TryTransition(GazeServiceState.Connected);
+                                ConnectionStatusChanged?.Invoke(this, true);
+                                logger.Info("Tobii Eye Tracker connected and streaming gaze points.");
+                            }
+                            else
+                            {
+                                reconnectAttempt++;
+                                int delayMs = reconnectPolicy.GetNextDelayMilliseconds(reconnectAttempt);
+                                stateMachine.TryTransition(GazeServiceState.Reconnecting,
+                                    new GazeServiceError("DISCONNECTED", $"Attempt {reconnectAttempt} failed. Retrying in {delayMs}ms."));
+
+                                ConnectionStatusChanged?.Invoke(this, false);
+
+                                if (WaitOrCancel(delayMs, token))
+                                {
+                                    break;
+                                }
+                                continue;
+                            }
                         }
-                        else
+
+                        if (stateMachine.CurrentState == GazeServiceState.Connected)
                         {
-                            reconnectAttempt++;
-                            int delayMs = reconnectPolicy.GetNextDelayMilliseconds(reconnectAttempt);
-                            stateMachine.TryTransition(GazeServiceState.Reconnecting,
-                                new GazeServiceError("DISCONNECTED", $"Attempt {reconnectAttempt} failed. Retrying in {delayMs}ms."));
+                            lock (lifecycleLock)
+                            {
+                                if (callbackPump != null && callbackPump.State == CallbackPumpState.Faulted)
+                                {
+                                    StopCallbackPump();
+                                    stateMachine.TryTransition(GazeServiceState.Reconnecting,
+                                        new GazeServiceError("PUMP_FAULT", "Callback pump entered faulted state."));
+                                    ConnectionStatusChanged?.Invoke(this, false);
+                                    continue;
+                                }
+                            }
 
-                            ConnectionStatusChanged?.Invoke(this, false);
-
-                            if (WaitOrCancel(delayMs, cts.Token))
+                            if (WaitOrCancel(100, token))
                             {
                                 break;
                             }
-                            continue;
                         }
                     }
-
-                    if (stateMachine.CurrentState == GazeServiceState.Connected)
+                    catch (OperationCanceledException)
                     {
-                        // Event-driven callback wait (ADR-005)
-                        var waitError = runtime.WaitForCallbacks();
-
-                        if (cts.Token.IsCancellationRequested)
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (token.IsCancellationRequested || generation != this.lifecycleGeneration)
                         {
                             break;
                         }
 
-                        if (waitError == tobii_error_t.TOBII_ERROR_NO_ERROR)
-                        {
-                            var processError = runtime.ProcessCallbacks();
-                            if (processError != tobii_error_t.TOBII_ERROR_NO_ERROR)
-                            {
-                                HandleStreamError(processError);
-                            }
-                        }
-                        else
-                        {
-                            HandleStreamError(waitError);
-                        }
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    logger.Error("Unexpected exception in Tobii worker loop.", ex);
-                    ErrorOccurred?.Invoke(this, ex);
+                        logger.Error("Unexpected exception in Tobii worker loop.", ex);
+                        ErrorOccurred?.Invoke(this, ex);
 
-                    stateMachine.TryTransition(GazeServiceState.Reconnecting,
-                        new GazeServiceError("EXCEPTION", ex.Message, ex));
+                        stateMachine.TryTransition(GazeServiceState.Reconnecting,
+                            new GazeServiceError("EXCEPTION", ex.Message, ex));
 
-                    if (WaitOrCancel(1000, cts.Token))
-                    {
-                        break;
+                        if (WaitOrCancel(1000, token))
+                        {
+                            break;
+                        }
                     }
                 }
             }
+            catch (Exception fatalEx)
+            {
+                logger.Error("Fatal unhandled exception in Tobii worker thread.", fatalEx);
+                ErrorOccurred?.Invoke(this, fatalEx);
+            }
+            finally
+            {
+                StopCallbackPump();
+                logger.Debug("Worker loop exited.");
+            }
+        }
 
-            logger.Debug("Worker loop exited.");
+        private void StartCallbackPump()
+        {
+            lock (lifecycleLock)
+            {
+                if (callbackPump != null)
+                {
+                    return;
+                }
+
+                if (callbackPumpFactory != null)
+                {
+                    callbackPump = callbackPumpFactory(runtime, HandleStreamError);
+                }
+                else
+                {
+                    callbackPump = CreateDefaultCallbackPump(runtime, configuration, HandleStreamError, logger);
+                }
+
+                callbackPump.PumpError += (sender, ex) =>
+                {
+                    logger.Warn($"Callback pump error event received: {ex.Message}");
+                    ErrorOccurred?.Invoke(this, ex);
+                };
+
+                callbackPump.Start();
+            }
+        }
+
+        private void StopCallbackPump()
+        {
+            ICallbackPump pumpToStop = null;
+            lock (lifecycleLock)
+            {
+                pumpToStop = callbackPump;
+                callbackPump = null;
+            }
+
+            if (pumpToStop != null)
+            {
+                try
+                {
+                    pumpToStop.RequestStop();
+                    pumpToStop.Join(stopTimeout);
+                }
+                catch (Exception ex)
+                {
+                    logger.Warn($"Exception while stopping callback pump: {ex.Message}");
+                }
+                finally
+                {
+                    try { pumpToStop.Dispose(); } catch { }
+                }
+            }
+        }
+
+        private static ICallbackPump CreateDefaultCallbackPump(
+            ITobiiRuntime runtime,
+            PluginConfiguration config,
+            Action<tobii_error_t> streamErrorCallback,
+            IPluginLogger logger)
+        {
+            if (config?.CallbackStrategy == CallbackStrategy.WaitAndProcess)
+            {
+                return new WaitAndProcessCallbackPump(runtime, streamErrorCallback, logger);
+            }
+
+            // Default: ProcessOnlyPollingPump (guarantees interruptible, bounded shutdown)
+            return new ProcessOnlyPollingPump(runtime, streamErrorCallback, config?.PollIntervalMs ?? 5, logger);
         }
 
         private bool TryEstablishConnection()
         {
             if (!runtime.Initialize())
             {
+                ErrorOccurred?.Invoke(this, ET5PluginException.RuntimeNotFound());
                 return false;
             }
 
@@ -205,11 +379,104 @@ namespace OptiKey.ET5.Plugin.Runtime
             if (!runtime.EnumerateDevices(out deviceUrls) || deviceUrls == null || deviceUrls.Count == 0)
             {
                 logger.Debug("No Tobii devices found on local system.");
+                ErrorOccurred?.Invoke(this, ET5PluginException.DeviceNotFound());
                 return false;
             }
 
-            logger.Warn("Tobii device identity is not verified; refusing to bind to an unverified device.");
-            return false;
+            logger.Info($"Enumerated {deviceUrls.Count} Tobii device candidate(s).");
+
+            string selectedUrl = ResolveDeviceCandidate(deviceUrls);
+            if (selectedUrl == null)
+            {
+                return false;
+            }
+
+            // Connect to selected device
+            if (!runtime.ConnectDevice(selectedUrl))
+            {
+                ErrorOccurred?.Invoke(this, ET5PluginException.ConnectionFailed(
+                    runtime.GetLastErrorDescription()));
+                return false;
+            }
+
+            // Subscribe gaze
+            if (!runtime.SubscribeGaze(nativeGazeCallback))
+            {
+                ErrorOccurred?.Invoke(this, ET5PluginException.CallbackFailure(
+                    "Failed to subscribe to gaze point stream."));
+                runtime.DisconnectDevice();
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Resolves the device URL to use based on scientific device selection policy (Phase 6):
+        /// 1. Explicit PreferredDeviceUrl or PreferredDeviceIndex overrides.
+        /// 2. If exactly ONE device candidate exists and AutomaticDeviceSelection is enabled (default), binds automatically.
+        /// 3. If MULTIPLE device candidates exist, strictly refuses silent auto-binding of candidate 0.
+        /// 4. If automatic selection is disabled, requires explicit user configuration.
+        /// </summary>
+        private string ResolveDeviceCandidate(List<string> deviceUrls)
+        {
+            // Priority 1: Explicit URL or Index configured by user or developer
+            if (!string.IsNullOrEmpty(configuration.PreferredDeviceUrl))
+            {
+                if (deviceUrls.Contains(configuration.PreferredDeviceUrl))
+                {
+                    logger.Info("Using explicitly configured device URL.");
+                    return configuration.PreferredDeviceUrl;
+                }
+                logger.Error("Configured PreferredDeviceUrl was not found in enumerated devices.");
+                ErrorOccurred?.Invoke(this, new ET5PluginException(
+                    ET5ErrorCode.DeviceNotFound,
+                    "Specified device URL was not found.",
+                    $"Enumerated {deviceUrls.Count} devices."));
+                return null;
+            }
+
+            if (configuration.PreferredDeviceIndex.HasValue)
+            {
+                int idx = configuration.PreferredDeviceIndex.Value;
+                if (idx >= 0 && idx < deviceUrls.Count)
+                {
+                    logger.Info($"Using explicitly configured device index: {idx}");
+                    return deviceUrls[idx];
+                }
+
+                logger.Error($"Configured PreferredDeviceIndex {idx} is out of range (count: {deviceUrls.Count}).");
+                ErrorOccurred?.Invoke(this, new ET5PluginException(
+                    ET5ErrorCode.DeviceNotFound,
+                    $"Device index {idx} out of range.",
+                    $"Enumerated {deviceUrls.Count} devices."));
+                return null;
+            }
+
+            // Priority 2: Exactly ONE candidate exists and AutomaticDeviceSelection (or AllowUnverifiedTobiiDevice) is enabled
+            if (deviceUrls.Count == 1 && (configuration.AutomaticDeviceSelection || configuration.AllowUnverifiedTobiiDevice))
+            {
+                logger.Info("Single Tobii device candidate detected and plugin selected by user; automatically binding.");
+                return deviceUrls[0];
+            }
+
+            // Priority 3: Multiple candidates exist -> NEVER silently auto-select candidate 0!
+            if (deviceUrls.Count > 1)
+            {
+                logger.Warn($"Multiple Tobii device candidates detected ({deviceUrls.Count}). " +
+                    "Automatic selection refused to prevent connecting to an unintended device. " +
+                    "Please configure PreferredDeviceIndex in %APPDATA%\\OptiKey-ET5-Plugin\\et5-plugin.config.");
+                ErrorOccurred?.Invoke(this, new ET5PluginException(
+                    ET5ErrorCode.DeviceIdentityUnknown,
+                    "Multiple Tobii devices detected.",
+                    $"Enumerated {deviceUrls.Count} devices. Specify PreferredDeviceIndex (0, 1, ...) in config."));
+                return null;
+            }
+
+            // Priority 4: Single candidate but automatic selection and developer override are disabled
+            logger.Warn("Automatic device selection is disabled and no explicit device was configured; refusing connection.");
+            ErrorOccurred?.Invoke(this, ET5PluginException.DeviceIdentityUnknown());
+            return null;
         }
 
         private void HandleStreamError(tobii_error_t error)
@@ -219,6 +486,9 @@ namespace OptiKey.ET5.Plugin.Runtime
                 new GazeServiceError(error.ToString(), runtime.GetLastErrorDescription()));
 
             ConnectionStatusChanged?.Invoke(this, false);
+            ErrorOccurred?.Invoke(this, ET5PluginException.ConnectionLost(error.ToString()));
+
+            StopCallbackPump();
 
             // Attempt reconnect through native runtime first
             if (!runtime.ReconnectDevice())
@@ -230,7 +500,7 @@ namespace OptiKey.ET5.Plugin.Runtime
 
         private void OnNativeGazePoint(ref tobii_gaze_point_t gazePoint, IntPtr userData)
         {
-            if (cts != null && cts.Token.IsCancellationRequested)
+            if (stateMachine.CurrentState != GazeServiceState.Connected)
             {
                 return;
             }
@@ -247,7 +517,14 @@ namespace OptiKey.ET5.Plugin.Runtime
 
         private static bool WaitOrCancel(int milliseconds, CancellationToken token)
         {
-            return token.WaitHandle.WaitOne(milliseconds);
+            try
+            {
+                return token.WaitHandle.WaitOne(milliseconds);
+            }
+            catch (ObjectDisposedException)
+            {
+                return true;
+            }
         }
 
         public void Dispose()
@@ -258,19 +535,42 @@ namespace OptiKey.ET5.Plugin.Runtime
                 {
                     return;
                 }
+            }
 
-                Stop();
-                stateMachine.ForceDisposed();
+            Stop();
 
-                if (cts != null)
+            lock (lifecycleLock)
+            {
+                if (stateMachine.CurrentState == GazeServiceState.Disposed)
                 {
-                    cts.Dispose();
-                    cts = null;
+                    return;
                 }
 
-                runtime.Dispose();
+                stateMachine.ForceDisposed();
+
+                var oldCts = cts;
+                cts = null;
+                try { oldCts?.Dispose(); } catch { }
+
+                bool hasStuckError = stateMachine.LastError != null && stateMachine.LastError.ErrorCode == "STUCK_WORKER";
+                bool workerClean = (workerThread == null || !workerThread.IsAlive);
+                if (workerClean && !hasStuckError)
+                {
+                    runtime.Dispose();
+                }
+                else
+                {
+                    logger.Warn("Worker thread or callback pump is still active after Stop() timeout; skipping runtime.Dispose() to prevent native use-after-free.");
+                }
+
                 logger.Info("TobiiGazeProvider disposed.");
             }
+        }
+
+        private class WorkerParams
+        {
+            public CancellationToken Token { get; set; }
+            public int Generation { get; set; }
         }
     }
 }

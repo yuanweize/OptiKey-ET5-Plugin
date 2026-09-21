@@ -1,3 +1,5 @@
+[English](ADR-008-host-runtime-dependencies.md) | [简体中文](ADR-008-host-runtime-dependencies.zh-CN.md)
+
 # ADR-008: Host-Provided Runtime Dependencies
 
 Status: Accepted for CI and alpha preparation, 2026-09-21.

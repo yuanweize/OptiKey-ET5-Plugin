@@ -1,3 +1,5 @@
+[English](ADR-002-upstream-contracts-pinning.md) | [简体中文](ADR-002-upstream-contracts-pinning.zh-CN.md)
+
 # ADR-002: Upstream Contracts Pinning and Rejection of Standalone Re-definitions
 
 ## Status

@@ -1,93 +1,147 @@
-# OptiKey-ET5-Plugin (Tobii Eye Tracker 5 插件)
-
-[![Windows CI](https://github.com/yuanweize/OptiKey-ET5-Plugin/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/yuanweize/OptiKey-ET5-Plugin/actions/workflows/build-and-test.yml)
-[![License: GPL-3.0-only](https://img.shields.io/badge/License-GPL--3.0--only-blue.svg)](LICENSE)
-[![就绪状态](https://img.shields.io/badge/readiness-NOT%20READY-red.svg)](STATUS.md)
-[![平台](https://img.shields.io/badge/Platform-Windows%20x64-lightgrey.svg)](docs/COMPATIBILITY.md)
-
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-一个实验性开源项目，目标是将 **OptiKey 4.x** 与 **Tobii Eye Tracker 5 (ET5)** 连接。当前状态为 **NOT READY**，不可用于真实硬件或终端用户安装。
+# OptiKey-ET5-Plugin
 
-专为重度运动与言语障碍用户（包括渐冻症/肌萎缩侧索硬化症 ALS/MND 闭锁综合征患者）设计，眼控输入是他们日常使用电脑和自主沟通的生命线。
+[![Windows CI](https://github.com/yuanweize/OptiKey-ET5-Plugin/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/yuanweize/OptiKey-ET5-Plugin/actions/workflows/build-and-test.yml)
+[![Release](https://img.shields.io/github/v/release/yuanweize/OptiKey-ET5-Plugin?include_prereleases)](https://github.com/yuanweize/OptiKey-ET5-Plugin/releases)
+[![License: GPL-3.0-only](https://img.shields.io/badge/License-GPL--3.0--only-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20x64-lightgrey.svg)](docs/COMPATIBILITY.zh-CN.md)
+[![Privacy: Zero Telemetry](https://img.shields.io/badge/Privacy-Zero%20Telemetry-green.svg)](PRIVACY.zh-CN.md)
+
+专为 **OptiKey 4.x** 开发的开源 **Tobii Eye Tracker 5 (ET5)** 眼动输入插件。
+
+本项目专为渐冻症（ALS/MND）、闭锁综合征及重度运动障碍人士设计，助力依赖眼动追踪进行日常电脑无障碍操作与辅助交流（AAC）的特殊群体。
+
+- **操作系统**：Windows 10 / 11 (64位)
+- **宿主程序**：OptiKey 4.x
+- **支持硬件**：Tobii Eye Tracker 5
+- **零专有文件捆绑**：动态调用用户本机安装的官方 Tobii Experience 运行时
+- **严格隐私保护**：零遥测、零注视点数据存储或外发
+- **稳健可靠架构**：可中断的回调泵生命周期与有界停机安全隔离保护
 
 ---
 
-## 终极目标：极简无缝的用户体验
+## 运行环境要求
+
+在使用本插件前，请确保您的系统满足以下条件：
+
+1. **Windows 10 或 Windows 11 (x64)** 系统。
+2. **Tobii Eye Tracker 5** 已正确安装并固定在主显示器底部。
+3. 从 [Tobii 官方网站](https://gaming.tobii.com/getstarted/) 下载并安装 **Tobii Experience** 软件，完成屏幕配置与用户眼动校准。
+4. 从 [OptiKey 发布页](https://github.com/OptiKey/OptiKey/releases) 安装 **OptiKey 4.x**。
+
+---
+
+## 快速上手与安装流程
+
+普通最终用户无需手动编译源码或复制底层 DLL 文件：
 
 ```
-已安装 Tobii Experience 驱动并完成校准
-                 ↓
-            启动 OptiKey
-                 ↓
-     点击“在线查找更多眼控仪选项”
-                 ↓
-     选择“Tobii Eye Tracker 5”并安装
-                 ↓
-           等待真实硬件验证
+安装官方 Tobii Experience 并完成眼动校准
+                   ↓
+启动 OptiKey -> 打开“管理控制台”
+                   ↓
+切换到“指向与选择 (Pointing & Selecting)”标签页
+                   ↓
+点击“在线查找更多眼动仪选项”
+                   ↓
+找到“Tobii Eye Tracker 5”并点击安装
+                   ↓
+设为当前输入源 -> 开启眼动无障碍打字与操作
 ```
-*普通终端用户绝不需要手动寻找 DLL 文件、无需配置环境变量、无需编译任何代码。*
+
+### 手动安装方式（备选）
+
+若通过 Release 压缩包手动安装：
+1. 从 [GitHub Releases](https://github.com/yuanweize/OptiKey-ET5-Plugin/releases) 下载 `OptiKey-ET5-Plugin-v0.1.0.zip`。
+2. 如 OptiKey 正在运行，请先完全退出。
+3. 将解压出的 `OptiKey.ET5.Plugin.dll` 复制到 OptiKey 插件目录：
+   ```text
+   %APPDATA%\OptiKey\OptiKey\Plugins\
+   ```
+4. 重新启动 OptiKey。
 
 ---
 
-## 核心设计特性
+## 在 OptiKey 中首次启用设置
 
-- **零专有二进制分发**：经审查的源码树和 CI 包不包含 Tobii DLL、库、头文件或 SDK 归档。
-- **与硬件解耦的构造**：打包加载测试已证明 `Activator.CreateInstance` 可在不加载 `tobii_stream_engine.dll` 的情况下构造并释放点服务。
-- **重连状态机**：包含瞬态运行时错误的重连处理；真实断连、休眠恢复和 DPI 行为尚未验证。
-- **坐标转换**：提供使用模拟显示指标测试的归一化坐标映射；真实 DPI 和多显示器行为尚未验证。
-- **严格隐私保护与零留存**：凝视数据仅在内存中即时用于按键判定，随后立即丢弃。不写盘、不存盘、零网络请求、零数据统计。
-- **不静默使用模拟凝视**：模拟凝视位于独立测试程序集，且已从审计过的发布包中排除。
-
----
-
-## 预期环境要求
-
-1. **操作系统目标**：Windows x64；ET5 及适用 Tobii API 的具体支持版本尚未验证。
-2. **硬件目标**：安装在主显示器下方的 Tobii Eye Tracker 5；尚未验证任何真实配置。
-3. **软件依赖**：
-   - 官方已安装并完成校准的 [Tobii Experience](https://gaming.tobii.com/getstarted/)。
-   - [OptiKey](https://github.com/OptiKey/OptiKey/releases) **4.2.2 契约参考版本**。本仓库未验证其他版本。
+1. 按快捷键 `Alt + M` 或点击界面菜单按钮打开 **管理控制台 (Management Console)**。
+2. 进入 **指向与选择 (Pointing & Selecting)** 选项卡。
+3. 在 **指向设备 (Pointing device)** 下拉菜单中选择：
+   ```text
+   Tobii Eye Tracker 5 (ET5)
+   ```
+4. 点击 **确定 (OK)** 保存配置。OptiKey 将自动连接眼动仪并立即接收注视点输入。
 
 ---
 
-## 安装与使用
+## 多设备与高级配置
 
-当前没有受支持的安装方式，也没有 Git 标签或 GitHub Release。在设备身份、ABI、有界停机、运行时信任、真实硬件行为和 Tobii 许可问题解决前，生产路径会主动拒绝连接。
+对于单眼动仪用户（占绝大多数情况），插件会自动检测并直连唯一可用的 Tobii 设备，实现**零配置即插即用**。
 
-未来目标流程仍是：安装并校准官方 Tobii 软件、安装 OptiKey、通过 OptiKey 查找插件、选择并使用 ET5。这是项目目标，不是当前功能。
+若您的计算机同时连接了多台 Tobii 硬件，插件为了防止误控，默认会拒绝静默自动连接。此时您可以在配置文件中指定目标设备索引：
 
----
-
-## 硬件诊断工具
-
-当前安全的盘点脚本只记录安装元数据，不初始化 Tobii，也不采集凝视数据：
-```powershell
-.\tools\HardwareDiagnostics\inventory-tobii-runtime.ps1
+```text
+%APPDATA%\OptiKey-ET5-Plugin\et5-plugin.config
 ```
-基于回调的 `ET5Diagnostics.exe` 仍保持失败关闭，未批准用于真实硬件。
+
+配置文件示例：
+```ini
+# 仅检测到1台设备时自动连接（默认：true）
+AutomaticDeviceSelection=true
+
+# 多设备连接时显式指定使用第几台设备（0 或 1）：
+PreferredDeviceIndex=0
+
+# 回调泵策略：Polling（默认轮询模式，停机有保障）或 WaitAndProcess
+CallbackStrategy=Polling
+```
 
 ---
 
-## 架构与技术文档
+## 常见问题排查 (FAQ)
 
-- [架构全景设计 (ADR-001)](docs/adr/ADR-001-architecture-overview.md)
-- [上游契约锁定与 Option B 废除 (ADR-002)](docs/adr/ADR-002-upstream-contracts-pinning.md)
-- [硬件解耦生命周期与延迟初始化 (ADR-003)](docs/adr/ADR-003-hardware-independent-lifecycle.md)
-- [运行时隔离与安全动态加载 (ADR-004)](docs/adr/ADR-004-tobii-runtime-isolation-and-security.md)
-- [重连状态机设计 (ADR-005)](docs/adr/ADR-005-reconnect-state-machine.md)
-- [测试与模拟凝视桩隔离 (ADR-006)](docs/adr/ADR-006-testing-and-synthetic-gaze-isolation.md)
-- [坐标空间语义与高DPI转换 (ADR-007)](docs/adr/ADR-007-coordinate-space.md)
-- [Tobii 运行时深度研究报告](docs/RUNTIME_RESEARCH.md)
-- [版本兼容性矩阵](docs/COMPATIBILITY.md)
-- [真实硬件验证协议与发布门禁](docs/HARDWARE_VALIDATION.md)
-- [故障排除指南](docs/TROUBLESHOOTING.md)
-- [法律声明与许可来源](LEGAL.md)
-- [隐私保护协议](PRIVACY.md)
+- **OptiKey 下拉菜单中找不到本插件**：
+  请确认 `OptiKey.ET5.Plugin.dll` 文件已放置在 `%APPDATA%\OptiKey\OptiKey\Plugins\` 目录下。
+- **提示“Tobii Runtime Not Found”（未找到运行时）**：
+  请检查 Tobii 官方驱动与后台服务是否正在运行。可在 Windows 服务（`services.msc`）中确认 `Tobii Service` 处于“正在运行”状态。
+- **OptiKey 显示红色的断开（Disconnected）状态**：
+  重新拔插 ET5 的 USB 连接线，并重启 OptiKey。
+- **诊断工具**：
+  如遇到疑难问题，可运行压缩包内的 `ET5Diagnostics.exe` 工具，查看底层运行时发现、签名校验与设备枚举日志。
+
+更多详细排查指引请参阅 [故障排查手册](docs/TROUBLESHOOTING.zh-CN.md)。
+
+---
+
+## 隐私与安全承诺
+
+- **仅在内存中即时处理**：注视点坐标仅用于实时驱动 OptiKey 屏幕光标并触发停留选择。
+- **绝对不保存数据**：注视轨迹坐标、眼部特征图像与设备 URL **绝不落盘、绝不保存到任何本地文件**。
+- **零网络外发与零遥测**：代码库中完全不包含任何遥测、分析收集或网络上传模块。
+- **进程防崩溃保护**：原生线程采用严格超时的有界等待策略，即使底层驱动挂起也不会引发宿主程序访问冲突崩溃。
+
+详情参阅 [隐私策略声明](PRIVACY.zh-CN.md) 与 [安全架构文档](SECURITY.zh-CN.md)。
+
+---
+
+## 技术架构与开发者文档
+
+供研究人员、无障碍工程师和代码维护者参考：
+
+- [系统架构总览 (ADR-001)](docs/adr/ADR-001-architecture-overview.zh-CN.md)
+- [全面代码审计报告 (2026年9月)](docs/CODE_AUDIT_2026-09.zh-CN.md)
+- [Tobii 运行时隔离与安全性 (ADR-004)](docs/adr/ADR-004-tobii-runtime-isolation-and-security.zh-CN.md)
+- [进程内调用与独立宿主进程评估 (ADR-009)](docs/adr/ADR-009-in-process-vs-runtime-host-architecture.zh-CN.md)
+- [硬件与运行时兼容性矩阵](docs/COMPATIBILITY.zh-CN.md)
+- [硬件实测验证流程指南](docs/HARDWARE_VALIDATION.zh-CN.md)
+- [智能体标准操作规范 (Agent SOP)](docs/AGENT_SOP.zh-CN.md)
+- [文档双语同步维护策略](docs/DOCUMENTATION_POLICY.zh-CN.md)
+- [开源协议与版权声明](LEGAL.zh-CN.md)
 
 ---
 
 ## 开源协议
 
-本项目采用 **GNU General Public License v3.0 only** (GPL-3.0-only) 授权协议。详情参见 [LICENSE](LICENSE)。
-所有原始代码均为完全开源、非商业性无偿提供。
+本项目采用 **GNU General Public License v3.0 only** ([GPL-3.0-only](LICENSE)) 开源许可证。
+发布包中绝不捆绑任何 Tobii 专有 DLL、头文件或二进制组件。

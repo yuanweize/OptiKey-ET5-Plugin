@@ -1,9 +1,27 @@
+[English](HARDWARE_VALIDATION.md) | [简体中文](HARDWARE_VALIDATION.zh-CN.md)
+
 # Hardware Validation Protocol and Release Gate
 
 ## Overview
 Because this software serves users with severe motor disabilities (such as ALS/MND) who depend on eye tracking for life-essential communication, **no standard release will be tagged until rigorous hardware validation on physical Tobii Eye Tracker 5 devices is completed**.
 
 Until all checks in this protocol pass, builds are distributed strictly as **GitHub Pre-releases** labeled with `-alpha` or `-beta`. OptiKey's internal plugin search explicitly ignores pre-releases, protecting vulnerable users from experimental builds.
+
+---
+
+## Pre-Hardware Diagnostic Tool
+Before connecting OptiKey or installing the plugin binary, run the non-invasive diagnostic inventory script to inspect the host environment:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\HardwareDiagnostics\inventory-tobii-runtime.ps1
+```
+
+The script inspects:
+- Standard installation directories, uninstall registry hives, and Windows services
+- COFF architecture headers (`AMD64` 64-bit verification)
+- Authenticode signature and digital certificate subject (`Tobii AB`)
+- Exported symbol capability table (`tobii_api_*`, `tobii_device_*`, `tobii_gaze_*`, `tobii_*_callbacks`)
+- Privacy guarantee: device URLs, serial numbers, and local usernames (`%USERPROFILE%`) are automatically sanitized.
 
 ---
 
@@ -17,10 +35,10 @@ Until all checks in this protocol pass, builds are distributed strictly as **Git
 - [ ] Tobii display setup and user profile calibration completed
 
 ### 2. Runtime Discovery & Security Verification
-- [ ] Run `tools/HardwareDiagnostics/ET5Diagnostics.exe`
-- [ ] Confirm runtime detected at valid path (`%ProgramFiles%\Tobii\Tobii Service`)
-- [ ] Confirm binary signature verified (Issuer: Tobii AB)
-- [ ] Confirm x64 PE architecture validated
+- [ ] Run `.\tools\HardwareDiagnostics\inventory-tobii-runtime.ps1`
+- [ ] Confirm runtime detected at valid path (`tobii_stream_engine.dll`)
+- [ ] Confirm binary signature verified (`Issuer: Tobii AB`, `SignatureStatus: Valid`)
+- [ ] Confirm x64 PE architecture validated (`IMAGE_FILE_MACHINE_AMD64`)
 - [ ] Confirm device enumerated (Model: Eye Tracker 5 / IS50, Serial redacted)
 
 ### 3. Coordinate Accuracy & Multi-DPI Verification
@@ -44,8 +62,11 @@ Until all checks in this protocol pass, builds are distributed strictly as **Git
   - Wake Windows.
   - Verify gaze stream resumes automatically.
 - [ ] **Tobii Service Restart Test**:
-  - Restart `Tobii.Service` via `net stop "Tobii Service"` and `net start "Tobii Service"`.
+  - Restart `Tobii Service` via `net stop "Tobii Service"` and `net start "Tobii Service"`.
   - Verify plugin reconnects cleanly.
+- [ ] **Bounded Shutdown / Stuck-Worker Test**:
+  - Unplug USB during active gaze stream and immediately close OptiKey.
+  - Verify OptiKey terminates cleanly within bounded timeout (< 3s) without hanging or crashing with `AccessViolationException`.
 
 ### 5. Endurance & Stability (Soak Test)
 - [ ] **30-Minute Continuous Gaze Typing Soak Test**:
@@ -61,8 +82,9 @@ Until all checks in this protocol pass, builds are distributed strictly as **Git
 ## Release Sign-off Table
 | Validation Gate | Target | Result | Validator | Date |
 | :--- | :--- | :--- | :--- | :--- |
-| CI Build & Tests | 100% Pass | PENDING | GitHub Actions | -- |
-| ZIP Asset Scan | Clean (no Tobii/Test DLLs) | PENDING | CI Package Script | -- |
-| Reflection Loader | 1 IPointService | PENDING | OptiKeyLoaderTest | -- |
+| CI Build & Tests (pinned-stable) | 100% Pass | PASS | GitHub Actions | 2026-09-21 |
+| CI Build & Tests (upstream-main) | 100% Pass | PASS | GitHub Actions | 2026-09-21 |
+| ZIP Asset Scan | Clean (no Tobii/Test DLLs) | PASS | CI Package Script | 2026-09-21 |
+| Reflection Loader Smoke Test | 1 IPointService | PASS | OptiKeyLoaderTest | 2026-09-21 |
 | Physical ET5 Test | Win 10/11 Passed | PENDING | Physical Tester | -- |
 | 2h Soak Test | 0 Leaks / 0 Crashes | PENDING | Physical Tester | -- |

@@ -1,3 +1,5 @@
+[English](THIRD_PARTY_NOTICES.md) | [简体中文](THIRD_PARTY_NOTICES.zh-CN.md)
+
 # Third-Party Notices and Acknowledgements
 
 This project references and builds upon open-source software and community specifications:
