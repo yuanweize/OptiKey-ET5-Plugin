@@ -1,3 +1,5 @@
+[English](AGENTS.md) | [简体中文](AGENTS.zh-CN.md)
+
 # AGENTS.md — Repository Mandates for Autonomous & Pair-Programming Agents
 
 > [!IMPORTANT]

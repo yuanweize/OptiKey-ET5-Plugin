@@ -1,19 +1,26 @@
-# Security Policy and Vulnerability Disclosure
+[English](SECURITY.md) | [简体中文](SECURITY.zh-CN.md)
+
+# Security Policy & Vulnerability Disclosure
 
 ## Supported Versions
+
 | Version | Supported | Notes |
 | :--- | :--- | :--- |
-| 1.0.x | Yes | Current development branch |
+| 0.1.x | Yes | Current active release line |
 
 ## Security Hardening in OptiKey-ET5-Plugin
-To safeguard vulnerable assistive technology users:
-1. **No Generic DLL Searching**: The plugin never loads native DLLs from `%PATH%`, the current directory, or `%TEMP%`.
-2. **Strict PE Architecture Verification**: Target libraries must explicitly validate as 64-bit AMD64 PE binaries prior to invoking `LoadLibrary`.
-3. **Signer Metadata Inspection**: The current implementation rejects files without Tobii signer metadata, but does not yet perform WinVerifyTrust Authenticode integrity and chain validation. This remains a security blocker.
-4. **Clean Parameterless Instantiation**: The plugin constructor executes zero native calls or network operations.
+
+To protect vulnerable assistive technology users and maintain high host application stability:
+
+1. **No Unsafe DLL Search Paths**: The plugin strictly refuses to load native DLLs from `%PATH%`, the working directory, or temporary directories. Only verified absolute paths from official Windows Services and installation roots are considered.
+2. **Strict PE64 Architecture Verification**: Candidate libraries must validate as 64-bit AMD64 PE binaries prior to invoking `LoadLibraryExW`.
+3. **Authenticode Code-Signing Trust Verification**: Discovered `tobii_stream_engine.dll` binaries are verified using the Win32 `WinVerifyTrust` API (`WINTRUST_ACTION_GENERIC_VERIFY_V2`), verifying file integrity and confirming that the certificate belongs to Tobii AB.
+4. **Safe Parameterless Instantiation**: The plugin constructor executes zero native calls or dynamic allocations, ensuring safe reflection loading by OptiKey.
+5. **Bounded Shutdown & Memory Isolation**: Native worker threads run with bounded join timeouts. If native threads are stuck, handle cleanup is safely bypassed to avoid use-after-free host crashes.
 
 ## Reporting a Vulnerability
-If you discover a security vulnerability or potential code-execution vector:
-1. Do **NOT** disclose the vulnerability in public GitHub issues or forums.
-2. Please send a confidential email detailing the issue and reproduction steps to: `yuanweize@users.noreply.github.com`.
-3. We will acknowledge receipt within 48 hours and work with you on a private patch before public disclosure.
+
+If you discover a security vulnerability or code-execution vector:
+1. Do **NOT** disclose the issue in public GitHub issues or discussions.
+2. Send a confidential report detailing reproduction steps to: `yuanweize@users.noreply.github.com`.
+3. We will acknowledge receipt within 48 hours and coordinate a private patch prior to public disclosure.

@@ -1,3 +1,5 @@
+[English](ADR-004-tobii-runtime-isolation-and-security.md) | [简体中文](ADR-004-tobii-runtime-isolation-and-security.zh-CN.md)
+
 # ADR-004: Tobii Runtime Isolation and Secure Dynamic Loading
 
 ## Status

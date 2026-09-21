@@ -22,6 +22,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Verify Documentation Synchronization
+        if: matrix.contracts_target == 'pinned-stable'
+        shell: pwsh
+        run: |
+          .\tools\scripts\check-doc-sync.ps1
+
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 

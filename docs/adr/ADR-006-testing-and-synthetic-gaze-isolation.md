@@ -1,3 +1,5 @@
+[English](ADR-006-testing-and-synthetic-gaze-isolation.md) | [简体中文](ADR-006-testing-and-synthetic-gaze-isolation.zh-CN.md)
+
 # ADR-006: Testing and Synthetic Gaze Isolation
 
 ## Status

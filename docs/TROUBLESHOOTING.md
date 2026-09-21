@@ -1,3 +1,5 @@
+[English](TROUBLESHOOTING.md) | [简体中文](TROUBLESHOOTING.zh-CN.md)
+
 # Troubleshooting Guide
 
 ## Diagnostic Quick-Start

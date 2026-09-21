@@ -1,3 +1,5 @@
+[English](ADR-009-in-process-vs-runtime-host-architecture.md) | [简体中文](ADR-009-in-process-vs-runtime-host-architecture.zh-CN.md)
+
 # ADR-009: Architectural Evaluation: In-Process vs. RuntimeHost Isolation
 
 **Status**: Proposed / Evaluation Baseline (Phase F, 2026-09-21)  

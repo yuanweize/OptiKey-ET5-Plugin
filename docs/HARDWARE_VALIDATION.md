@@ -1,3 +1,5 @@
+[English](HARDWARE_VALIDATION.md) | [简体中文](HARDWARE_VALIDATION.zh-CN.md)
+
 # Hardware Validation Protocol and Release Gate
 
 ## Overview

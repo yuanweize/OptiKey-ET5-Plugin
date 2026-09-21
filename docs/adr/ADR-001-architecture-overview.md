@@ -1,3 +1,5 @@
+[English](ADR-001-architecture-overview.md) | [简体中文](ADR-001-architecture-overview.zh-CN.md)
+
 # ADR-001: Architecture Overview and Component Boundaries
 
 ## Status

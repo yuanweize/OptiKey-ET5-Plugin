@@ -1,3 +1,5 @@
+[English](CALLBACK_RESEARCH.md) | [简体中文](CALLBACK_RESEARCH.zh-CN.md)
+
 # Callback Processing Research & Strategy Evidence
 
 > **Document Status**: Active research specification (Phase E)  

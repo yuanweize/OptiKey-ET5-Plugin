@@ -4,6 +4,18 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (validate build and packages without creating GitHub Release)'
+        type: boolean
+        default: false
+        required: false
+      version_tag:
+        description: 'Version tag to simulate (e.g. v0.1.0)'
+        type: string
+        default: 'v0.1.0'
+        required: false
 
 jobs:
   release:
@@ -16,6 +28,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Verify Documentation Synchronization
+        shell: pwsh
+        run: |
+          .\tools\scripts\check-doc-sync.ps1
+
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
@@ -25,12 +42,22 @@ jobs:
       - name: Setup VSTest
         uses: darenm/Setup-VSTest@v1.2
 
-      - name: Validate Pre-release Tag
+      - name: Determine Effective Release Tag
+        id: tag_info
         shell: pwsh
         run: |
-          if ("${{ github.ref_name }}" -notmatch "^v\d+\.\d+\.\d+-(alpha|beta|rc)(\.\d+)?$") {
-            throw "Stable release tags are blocked until real ET5 hardware validation is complete. Use a prerelease tag such as v0.1.0-alpha.1."
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $tag = "${{ inputs.version_tag }}"
+          } else {
+            $tag = "${{ github.ref_name }}"
           }
+          if ($tag -notmatch "^v\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$") {
+            throw "Invalid release tag format '$tag'. Must follow semantic versioning (e.g., v0.1.0 or v0.1.0-alpha.1)."
+          }
+          $cleanVersion = $tag.TrimStart('v')
+          Write-Host "Target Release Tag: $tag (Version: $cleanVersion)"
+          echo "tag=$tag" >> $env:GITHUB_OUTPUT
+          echo "version=$cleanVersion" >> $env:GITHUB_OUTPUT
 
       - name: Determine Upstream Contracts Reference
         id: contracts-ref
@@ -59,19 +86,22 @@ jobs:
         shell: pwsh
         run: |
           .\tools\scripts\run-tests.ps1
+
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: OptiKey-ET5-Plugin-Release-TestResults
-          path: artifacts/test-results/OptiKey.ET5.Plugin.Tests.trx
+          path: |
+            artifacts/test-results/OptiKey.ET5.Plugin.Tests.trx
+            artifacts/test-results/vstest-output.log
 
       - name: Package Release ZIP
         id: package
         shell: pwsh
         run: |
-          $tag = "${{ github.ref_name }}".TrimStart('v')
-          .\tools\scripts\package-release.ps1 -Version "$tag"
+          $v = "${{ steps.tag_info.outputs.version }}"
+          .\tools\scripts\package-release.ps1 -Version "$v"
 
       - name: Packaged OptiKey Loader Smoke Test
         shell: pwsh
@@ -101,20 +131,53 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: OptiKey-ET5-Plugin-Release-TestResults-upstream-main
-          path: artifacts/test-results/upstream-main/OptiKey.ET5.Plugin.Tests.trx
+          path: |
+            artifacts/test-results/upstream-main/OptiKey.ET5.Plugin.Tests.trx
+            artifacts/test-results/upstream-main/vstest-output.log
 
-      - name: Determine Pre-release Flag
-        id: prerelease_check
+      - name: Generate Bilingual Release Notes
+        id: release_notes
         shell: pwsh
         run: |
-          $isPrerelease = "${{ github.ref_name }}" -match "-(alpha|beta|rc)"
-          echo "is_prerelease=$($isPrerelease.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          $body = @"
+          ## OptiKey-ET5-Plugin ${{ steps.tag_info.outputs.tag }}
+
+          Open-source Tobii Eye Tracker 5 input plugin for OptiKey.
+          适用于 OptiKey 的开源 Tobii Eye Tracker 5 (ET5) 眼动仪输入插件。
+
+          ---
+
+          ### English Highlights
+          - **Seamless Automatic Connection**: Automatically connects when single Tobii Eye Tracker 5 is detected.
+          - **Multi-Device Safety Guard**: Strictly refuses silent selection when multiple Tobii candidates are present.
+          - **Native Driver Security**: Verifies Authenticode digital signature (`WinVerifyTrust`) and PE64 header before dynamic loading.
+          - **Zero Bundled Binaries**: No proprietary Tobii files bundled; utilizes official user-installed Tobii Experience.
+          - **Strict Privacy Invariant**: Real-time memory processing only; zero persistent storage, logging, or transmission of eye gaze coordinates.
+          - **Crash Isolation & Resiliency**: Interruptible callback pump with bounded teardown timeout and stuck-worker isolation.
+
+          ### 简体中文更新亮点
+          - **无缝即插即用**：检测到单台 Tobii Eye Tracker 5 时自动匹配并连接，无需普通用户额外配置。
+          - **多设备安全保护**：检测到多台候选设备时严格拒绝静默自动选择，防止误控。
+          - **驱动原生安全验证**：动态加载前执行 Authenticode 数字签名完整性（`WinVerifyTrust`）与 PE64 架构校验。
+          - **零专有二进制捆绑**：仓库与发布包不含任何 Tobii 专有文件，完全依托用户本地官方 Tobii Experience。
+          - **严格隐私不变性**：仅在易失内存中实时分发注视点，绝不持久化、记录或网络传输眼动坐标。
+          - **崩溃隔离与自愈恢复**：可打断的回调泵设计，具备有界关闭保护与卡死工作线程隔离。
+
+          ---
+          **SHA256 Checksums:**
+          Refer to the attached `SHA256SUMS.txt`.
+          "@
+          Set-Content -Path artifacts/release/release-notes.md -Value $body -Encoding UTF8
 
       - name: Create GitHub Release
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run)
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag_info.outputs.tag }}
+          name: "OptiKey-ET5-Plugin ${{ steps.tag_info.outputs.tag }}"
+          body_path: artifacts/release/release-notes.md
           files: |
             artifacts/release/OptiKey-ET5-Plugin-*.zip
             artifacts/release/SHA256SUMS.txt
-          prerelease: ${{ steps.prerelease_check.outputs.is_prerelease }}
-          generate_release_notes: true
+          prerelease: false
+          generate_release_notes: false

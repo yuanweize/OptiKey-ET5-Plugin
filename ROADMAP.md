@@ -1,3 +1,5 @@
+[English](ROADMAP.md) | [简体中文](ROADMAP.zh-CN.md)
+
 # Project Roadmap
 
 ## Phase 1: Repository Infrastructure & Architecture (Current)

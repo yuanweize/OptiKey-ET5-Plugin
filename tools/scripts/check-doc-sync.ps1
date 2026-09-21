@@ -29,9 +29,9 @@ $exemptions = @(
 
 $errors = @()
 
-# 1. Gather all markdown files in root, docs, and .github (excluding .git, bin, obj, packages, artifacts)
+# 1. Gather all markdown files in root and docs (excluding .git, bin, obj, packages, artifacts, .github)
 $mdFiles = Get-ChildItem -Path $rootResolved -Recurse -Filter "*.md" | Where-Object {
-    $_.FullName -notmatch '[\\/](\.git|bin|obj|packages|artifacts|\.agents)[\\/]'
+    $_.FullName -notmatch '[\\/](\.git|bin|obj|packages|artifacts|\.agents|\.github)[\\/]'
 }
 
 $fileMap = @{}

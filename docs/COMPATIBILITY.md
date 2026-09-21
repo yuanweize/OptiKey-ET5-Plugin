@@ -1,3 +1,5 @@
+[English](COMPATIBILITY.md) | [简体中文](COMPATIBILITY.zh-CN.md)
+
 # Compatibility Matrix and Environment Requirements
 
 ## Target Hardware
