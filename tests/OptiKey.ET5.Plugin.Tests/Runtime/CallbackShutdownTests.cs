@@ -205,6 +205,46 @@ namespace OptiKey.ET5.Plugin.Tests
             pump.Dispose(); // Repeated dispose is safe
         }
 
+        [Test]
+        public void WaitAndProcessPump_StartAfterDispose_ThrowsObjectDisposedException()
+        {
+            var pump = new WaitAndProcessCallbackPump(
+                waitFunc: () => tobii_error_t.TOBII_ERROR_NO_ERROR,
+                processFunc: () => tobii_error_t.TOBII_ERROR_NO_ERROR);
+
+            pump.Dispose();
+
+            Assert.Throws<ObjectDisposedException>(() => pump.Start());
+        }
+
+        [Test]
+        public void WaitAndProcessPump_RequestStopAndDisposeRace_Safe()
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                var pump = new WaitAndProcessCallbackPump(
+                    waitFunc: () =>
+                    {
+                        Thread.Sleep(2);
+                        return tobii_error_t.TOBII_ERROR_NO_ERROR;
+                    },
+                    processFunc: () => tobii_error_t.TOBII_ERROR_NO_ERROR);
+
+                pump.Start();
+
+                var t1 = new Thread(() => pump.RequestStop());
+                var t2 = new Thread(() => pump.Dispose());
+
+                t1.Start();
+                t2.Start();
+
+                t1.Join();
+                t2.Join();
+
+                Assert.That(pump.State, Is.EqualTo(CallbackPumpState.Disposed));
+            }
+        }
+
         #endregion
 
         #region ProcessOnlyPollingPump Tests
@@ -319,6 +359,46 @@ namespace OptiKey.ET5.Plugin.Tests
             // TOBII_ERROR_TIMED_OUT must be filtered out for polling
             Assert.That(reportedErrors, Does.Not.Contain(tobii_error_t.TOBII_ERROR_TIMED_OUT));
             Assert.That(reportedErrors, Contains.Item(tobii_error_t.TOBII_ERROR_CONNECTION_FAILED));
+        }
+
+        [Test]
+        public void PollingPump_StartAfterDispose_ThrowsObjectDisposedException()
+        {
+            var pump = new ProcessOnlyPollingPump(
+                processFunc: () => tobii_error_t.TOBII_ERROR_NO_ERROR,
+                pollIntervalMs: 5);
+
+            pump.Dispose();
+
+            Assert.Throws<ObjectDisposedException>(() => pump.Start());
+        }
+
+        [Test]
+        public void PollingPump_RequestStopAndDisposeRace_Safe()
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                var pump = new ProcessOnlyPollingPump(
+                    processFunc: () =>
+                    {
+                        Thread.Sleep(2);
+                        return tobii_error_t.TOBII_ERROR_NO_ERROR;
+                    },
+                    pollIntervalMs: 5);
+
+                pump.Start();
+
+                var t1 = new Thread(() => pump.RequestStop());
+                var t2 = new Thread(() => pump.Dispose());
+
+                t1.Start();
+                t2.Start();
+
+                t1.Join();
+                t2.Join();
+
+                Assert.That(pump.State, Is.EqualTo(CallbackPumpState.Disposed));
+            }
         }
 
         #endregion

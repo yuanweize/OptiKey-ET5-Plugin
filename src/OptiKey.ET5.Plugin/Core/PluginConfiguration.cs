@@ -121,7 +121,7 @@ namespace OptiKey.ET5.Plugin.Core
             return config;
         }
 
-        private static void LoadFromEnvironment(PluginConfiguration config, IPluginLogger logger)
+        internal static void LoadFromEnvironment(PluginConfiguration config, IPluginLogger logger)
         {
             try
             {
@@ -192,28 +192,37 @@ namespace OptiKey.ET5.Plugin.Core
             }
         }
 
-        private static void LoadFromConfigFile(PluginConfiguration config, IPluginLogger logger)
+        internal static void LoadFromConfigFile(PluginConfiguration config, IPluginLogger logger, string explicitPath = null)
         {
             try
             {
-                string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                if (string.IsNullOrEmpty(appData)) return;
-
-                // Primary path: %APPDATA%\OptiKey-ET5-Plugin\et5-plugin.config
-                string configPath = Path.Combine(appData, PrimaryConfigDirectory, ConfigFileName);
-                if (!File.Exists(configPath))
+                string configPath = explicitPath;
+                if (string.IsNullOrEmpty(configPath))
                 {
-                    // Fallback to legacy path: %APPDATA%\OptiKey\OptiKey\ET5Plugin\et5-plugin.config
-                    string legacyPath = Path.Combine(appData, "OptiKey", "OptiKey", "ET5Plugin", ConfigFileName);
-                    if (File.Exists(legacyPath))
+                    string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                    if (string.IsNullOrEmpty(appData)) return;
+
+                    // Primary path: %APPDATA%\OptiKey-ET5-Plugin\et5-plugin.config
+                    configPath = Path.Combine(appData, PrimaryConfigDirectory, ConfigFileName);
+                    if (!File.Exists(configPath))
                     {
-                        configPath = legacyPath;
+                        // Fallback to legacy path: %APPDATA%\OptiKey\OptiKey\ET5Plugin\et5-plugin.config
+                        string legacyPath = Path.Combine(appData, "OptiKey", "OptiKey", "ET5Plugin", ConfigFileName);
+                        if (File.Exists(legacyPath))
+                        {
+                            configPath = legacyPath;
+                        }
+                        else
+                        {
+                            logger.Debug($"No config file found at primary or legacy paths.");
+                            return;
+                        }
                     }
-                    else
-                    {
-                        logger.Debug($"No config file found at primary or legacy paths.");
-                        return;
-                    }
+                }
+                else if (!File.Exists(configPath))
+                {
+                    logger.Debug($"Explicit config file not found at: {configPath}");
+                    return;
                 }
 
                 logger.Info($"Reading config from: {configPath}");
