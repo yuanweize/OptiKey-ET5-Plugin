@@ -18,9 +18,23 @@ if (Test-Path -LiteralPath $trxPath) {
 }
 
 Write-Host "Running test project: $TestProject"
-& dotnet test $TestProject --configuration $Configuration --no-build --no-restore -p:Platform=$Platform --logger "trx;LogFileName=OptiKey.ET5.Plugin.Tests.trx" --results-directory $ResultsDirectory
+$testDll = Get-ChildItem -Path (Split-Path -Parent $TestProject) -Filter "OptiKey.ET5.Plugin.Tests.dll" -Recurse |
+    Where-Object { $_.FullName -match "\\$Configuration\\" } |
+    Select-Object -First 1
+if ($null -eq $testDll) {
+    throw "Built test assembly was not found for configuration $Configuration."
+}
+
+$adapter = Get-ChildItem -Path $testDll.DirectoryName -Filter "NUnit3.TestAdapter.dll" -Recurse |
+    Select-Object -First 1
+if ($null -eq $adapter) {
+    throw "NUnit3.TestAdapter.dll was not found beside the built test assembly."
+}
+
+Write-Host "Executing test assembly with adapter: $($testDll.FullName) / $($adapter.FullName)"
+& vstest.console.exe $testDll.FullName /Platform:$Platform /TestAdapterPath:$($adapter.DirectoryName) "/Logger:trx;LogFileName=OptiKey.ET5.Plugin.Tests.trx" "/ResultsDirectory:$ResultsDirectory"
 if ($LASTEXITCODE -ne 0) {
-    throw "dotnet test failed with exit code $LASTEXITCODE."
+    throw "vstest.console.exe failed with exit code $LASTEXITCODE."
 }
 if (-not (Test-Path -LiteralPath $trxPath)) {
     throw "dotnet test did not produce the expected TRX file: $trxPath"
