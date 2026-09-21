@@ -35,12 +35,15 @@ namespace OptiKey.ET5.Plugin.Runtime
         public bool IsConnected => stateMachine.CurrentState == GazeServiceState.Connected;
         public GazeServiceStateMachine StateMachine => stateMachine;
 
+        private readonly TimeSpan stopTimeout;
+
         public TobiiGazeProvider(
             ITobiiRuntime runtime = null,
             IReconnectPolicy reconnectPolicy = null,
             IPluginLogger logger = null,
             GazeServiceStateMachine stateMachine = null,
-            PluginConfiguration configuration = null)
+            PluginConfiguration configuration = null,
+            TimeSpan? stopTimeout = null)
         {
             this.logger = logger ?? new PluginLogger(typeof(TobiiGazeProvider));
             this.runtime = runtime ?? new TobiiNativeRuntime(logger: this.logger);
@@ -50,6 +53,7 @@ namespace OptiKey.ET5.Plugin.Runtime
             // Configuration is loaded lazily on first Start() if not injected,
             // to preserve the parameterless ET5PointService constructor contract.
             this.configuration = configuration;
+            this.stopTimeout = stopTimeout ?? TimeSpan.FromSeconds(2);
 
             // Pin delegate to instance field to prevent unmanaged callback crash
             this.nativeGazeCallback = OnNativeGazePoint;
@@ -108,7 +112,19 @@ namespace OptiKey.ET5.Plugin.Runtime
 
                 if (workerThread != null && workerThread.IsAlive && workerThread != Thread.CurrentThread)
                 {
-                    workerThread.Join();
+                    bool joined = workerThread.Join(stopTimeout);
+                    if (!joined)
+                    {
+                        logger.Error(
+                            $"CRITICAL: Worker thread did not terminate within {stopTimeout.TotalSeconds:F1}s. " +
+                            "Native thread is potentially stuck in tobii_wait_for_callbacks. " +
+                            "Aborting native handle cleanup to prevent use-after-free.");
+
+                        stateMachine.TryTransition(GazeServiceState.Error,
+                            new GazeServiceError("STUCK_WORKER", "Worker thread failed to terminate during Stop()."));
+                        ConnectionStatusChanged?.Invoke(this, false);
+                        return;
+                    }
                     workerThread = null;
                 }
 
@@ -376,7 +392,16 @@ namespace OptiKey.ET5.Plugin.Runtime
                     cts = null;
                 }
 
-                runtime.Dispose();
+                bool workerClean = (workerThread == null || !workerThread.IsAlive);
+                if (workerClean)
+                {
+                    runtime.Dispose();
+                }
+                else
+                {
+                    logger.Warn("Worker thread is still active after Stop() timeout; skipping runtime.Dispose() to prevent native use-after-free.");
+                }
+
                 logger.Info("TobiiGazeProvider disposed.");
             }
         }
