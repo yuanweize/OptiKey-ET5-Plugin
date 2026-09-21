@@ -39,7 +39,7 @@ foreach ($file in $mdFiles) {
         $lineNo++
         $trimmed = $line.Trim()
 
-        if ($trimmed.StartsWith("```") -or $trimmed.StartsWith("~~~")) {
+        if ($trimmed.StartsWith('```') -or $trimmed.StartsWith('~~~')) {
             $inCodeBlock = -not $inCodeBlock
             continue
         }
@@ -75,7 +75,7 @@ foreach ($file in $mdFiles) {
             }
 
             if (-not (Test-Path -Path $resolvedPath)) {
-                $errors += "$relFile`:$lineNo - Broken link: [$text]($target) -> Target not found: $targetNoAnchor"
+                $errors += "$($relFile):$($lineNo) - Broken link: [$text]($target) -> Target not found: $targetNoAnchor"
             }
         }
     }
