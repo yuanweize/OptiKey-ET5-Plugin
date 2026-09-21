@@ -4,6 +4,7 @@ using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using OptiKey.ET5.Plugin.Diagnostics;
 using OptiKey.ET5.Plugin.Runtime.Discovery;
+using OptiKey.ET5.Plugin.Security;
 
 namespace OptiKey.ET5.Plugin.Runtime
 {
@@ -15,6 +16,7 @@ namespace OptiKey.ET5.Plugin.Runtime
         public bool IsSignerMetadataAccepted { get; }
         public string Publisher { get; }
         public string FailureReason { get; }
+        public RuntimeTrustResult TrustResult { get; }
 
         public RuntimeLocatorResult(
             bool isFound,
@@ -22,7 +24,8 @@ namespace OptiKey.ET5.Plugin.Runtime
             bool isArchValid,
             bool isSigVerified,
             string publisher,
-            string failureReason = null)
+            string failureReason = null,
+            RuntimeTrustResult trustResult = null)
         {
             IsFound = isFound;
             LibraryPath = libraryPath;
@@ -30,11 +33,12 @@ namespace OptiKey.ET5.Plugin.Runtime
             IsSignerMetadataAccepted = isSigVerified;
             Publisher = publisher;
             FailureReason = failureReason;
+            TrustResult = trustResult;
         }
 
-        public static RuntimeLocatorResult Failed(string reason)
+        public static RuntimeLocatorResult Failed(string reason, RuntimeTrustResult trustResult = null)
         {
-            return new RuntimeLocatorResult(false, null, false, false, null, reason);
+            return new RuntimeLocatorResult(false, null, false, false, null, reason, trustResult);
         }
     }
 
@@ -53,15 +57,18 @@ namespace OptiKey.ET5.Plugin.Runtime
         private readonly IPluginLogger logger;
         private readonly IEnumerable<string> customProbePaths;
         private readonly CompositeRuntimeDiscovery discovery;
+        private readonly IRuntimeTrustVerifier trustVerifier;
 
         public TobiiRuntimeLocator(
             IPluginLogger logger = null,
             IEnumerable<string> customProbePaths = null,
-            CompositeRuntimeDiscovery discovery = null)
+            CompositeRuntimeDiscovery discovery = null,
+            IRuntimeTrustVerifier trustVerifier = null)
         {
             this.logger = logger ?? new PluginLogger(typeof(TobiiRuntimeLocator));
             this.customProbePaths = customProbePaths;
             this.discovery = discovery ?? CompositeRuntimeDiscovery.CreateDefault(customProbePaths, this.logger);
+            this.trustVerifier = trustVerifier ?? new RuntimeTrustVerifier(this.logger);
         }
 
         public RuntimeLocatorResult LocateRuntime()
@@ -84,21 +91,29 @@ namespace OptiKey.ET5.Plugin.Runtime
                     continue;
                 }
 
-                // 2. Inspect signer metadata; this is not Authenticode trust validation.
-                bool signerMetadataAccepted = InspectSignerMetadata(path, out string publisher);
-                if (!signerMetadataAccepted)
+                // 2. Cryptographic Authenticode & Signer Verification (Phase H)
+                var trustResult = trustVerifier.VerifyFileTrust(path);
+                if (!trustResult.SignerMatchesTobii)
                 {
-                    logger.Warn($"Candidate rejected: Tobii signer metadata was not accepted for: {path}");
+                    logger.Warn($"Candidate rejected: Tobii signer verification failed: {path}. " +
+                        $"Subject='{trustResult.SignerSubject ?? "None"}', Status={trustResult.SignatureStatus}");
                     continue;
                 }
 
-                logger.Info($"Located Tobii runtime candidate after PE and signer metadata checks: {path} (Publisher: {publisher ?? "Unknown"})");
+                if (trustResult.ChainStatus != ChainStatus.Trusted)
+                {
+                    logger.Warn($"Notice: Binary signature is valid but certificate chain is {trustResult.ChainStatus}: {path}");
+                }
+
+                logger.Info($"Located Tobii runtime candidate: {path} (Publisher: {trustResult.SignerSubject ?? "Unknown"}, Chain: {trustResult.ChainStatus})");
                 return new RuntimeLocatorResult(
                     isFound: true,
                     libraryPath: path,
                     isArchValid: true,
-                    isSigVerified: signerMetadataAccepted,
-                    publisher: publisher);
+                    isSigVerified: trustResult.SignerMatchesTobii,
+                    publisher: trustResult.SignerSubject,
+                    failureReason: null,
+                    trustResult: trustResult);
             }
 
             string failure = "Tobii Experience runtime (tobii_stream_engine.dll) was not found in standard system locations.";
