@@ -51,12 +51,14 @@ namespace OptiKey.ET5.Plugin.Tests
         [Test]
         public void WaitAndProcessPump_StuckWorker_TimesOutGracefully_EntersTimedOutState()
         {
+            var enteredWaitEvent = new ManualResetEventSlim(false);
             var unblockEvent = new ManualResetEventSlim(false);
 
             var pump = new WaitAndProcessCallbackPump(
                 waitFunc: () =>
                 {
-                    // Simulate blocking native WaitForCallbacks
+                    // Signal that worker has reliably entered the blocking native wait
+                    enteredWaitEvent.Set();
                     unblockEvent.Wait();
                     return tobii_error_t.TOBII_ERROR_NO_ERROR;
                 },
@@ -64,6 +66,9 @@ namespace OptiKey.ET5.Plugin.Tests
 
             pump.Start();
             Assert.That(pump.State, Is.EqualTo(CallbackPumpState.Running));
+
+            // Ensure worker thread is actively blocked inside waitFunc before requesting stop
+            Assert.That(enteredWaitEvent.Wait(TimeSpan.FromSeconds(3)), Is.True, "Worker must enter waitFunc before stop request");
 
             // Request stop while worker is stuck in waitFunc
             pump.RequestStop();
@@ -274,6 +279,7 @@ namespace OptiKey.ET5.Plugin.Tests
                 Thread.Sleep(20);
             }
             Assert.That(provider.IsConnected, Is.True, "Provider should connect to fake device");
+            Assert.That(stuckRuntime.EnteredWaitEvent.Wait(TimeSpan.FromSeconds(3)), Is.True, "Worker must enter wait before stop");
 
             // Stop provider while native wait is permanently blocked
             var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -361,6 +367,7 @@ namespace OptiKey.ET5.Plugin.Tests
             {
                 Thread.Sleep(10);
             }
+            Assert.That(stuckRuntime.EnteredWaitEvent.Wait(TimeSpan.FromSeconds(3)), Is.True, "Worker must enter wait before dispose");
 
             // Dispose while worker is blocked in WaitForCallbacks
             provider.Dispose();
@@ -379,6 +386,7 @@ namespace OptiKey.ET5.Plugin.Tests
         private class StuckFakeRuntime : ITobiiRuntime
         {
             private readonly ManualResetEventSlim unblockEvent;
+            public ManualResetEventSlim EnteredWaitEvent { get; } = new ManualResetEventSlim(false);
             public bool UnsubscribeGazeCalled { get; private set; }
             public bool DisconnectDeviceCalled { get; private set; }
             public bool DisposeCalled { get; private set; }
@@ -409,6 +417,7 @@ namespace OptiKey.ET5.Plugin.Tests
             }
             public tobii_error_t WaitForCallbacks()
             {
+                EnteredWaitEvent.Set();
                 unblockEvent.Wait();
                 return tobii_error_t.TOBII_ERROR_NO_ERROR;
             }
