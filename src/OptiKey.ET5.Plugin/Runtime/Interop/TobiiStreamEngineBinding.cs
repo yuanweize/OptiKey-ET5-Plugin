@@ -6,7 +6,7 @@ using OptiKey.ET5.Plugin.Diagnostics;
 
 namespace OptiKey.ET5.Plugin.Runtime
 {
-    #region Enums and Structs (ADR-004 & docs/RUNTIME_RESEARCH.md)
+    #region Enums and Structs (ADR-004 & docs/research/RUNTIME_RESEARCH.md)
 
     public enum tobii_error_t
     {
