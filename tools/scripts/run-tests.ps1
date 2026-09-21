@@ -25,10 +25,15 @@ if ($null -eq $testDll) {
     throw "Built test assembly was not found for configuration $Configuration."
 }
 
-$adapter = Get-ChildItem -Path $testDll.DirectoryName -Filter "NUnit3.TestAdapter.dll" -Recurse |
+$searchRoots = @(
+    $testDll.DirectoryName,
+    (Join-Path $PSScriptRoot "..\.."),
+    (Join-Path $env:USERPROFILE ".nuget\packages")
+) | Where-Object { Test-Path -LiteralPath $_ }
+$adapter = Get-ChildItem -Path $searchRoots -Filter "NUnit3.TestAdapter.dll" -Recurse -ErrorAction SilentlyContinue |
     Select-Object -First 1
 if ($null -eq $adapter) {
-    throw "NUnit3.TestAdapter.dll was not found beside the built test assembly."
+    throw "NUnit3.TestAdapter.dll was not found in the test output, repository, or NuGet global cache."
 }
 
 Write-Host "Executing test assembly with adapter: $($testDll.FullName) / $($adapter.FullName)"
