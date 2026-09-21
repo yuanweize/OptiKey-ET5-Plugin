@@ -81,6 +81,28 @@ jobs:
           $harness = (Resolve-Path "tools/PackagedLoaderHarness/bin/x64/Release/net46/PackagedLoaderHarness.exe").Path
           & $harness $zip $contracts (Resolve-Path "tests/OptiKey.ET5.Plugin.Tests/bin/x64/Release/net46").Path
 
+      - name: Build Upstream-Main OptiKey Contracts
+        shell: pwsh
+        run: |
+          .\tools\scripts\build-contracts.ps1 -TargetRef "main"
+
+      - name: Rebuild Against Upstream-Main Contracts
+        shell: pwsh
+        run: |
+          msbuild OptiKey-ET5-Plugin.sln /p:Configuration=Release /p:Platform=x64 /t:Rebuild /v:m
+
+      - name: Run Upstream-Main Compatibility Tests
+        shell: pwsh
+        run: |
+          .\tools\scripts\run-tests.ps1 -ResultsDirectory "artifacts/test-results/upstream-main"
+
+      - name: Upload Upstream-Main Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OptiKey-ET5-Plugin-Release-TestResults-upstream-main
+          path: artifacts/test-results/upstream-main/OptiKey.ET5.Plugin.Tests.trx
+
       - name: Determine Pre-release Flag
         id: prerelease_check
         shell: pwsh
