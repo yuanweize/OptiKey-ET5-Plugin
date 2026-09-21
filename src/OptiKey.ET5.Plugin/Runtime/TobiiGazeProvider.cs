@@ -120,7 +120,7 @@ namespace OptiKey.ET5.Plugin.Runtime
                             "Native thread is potentially stuck in tobii_wait_for_callbacks. " +
                             "Aborting native handle cleanup to prevent use-after-free.");
 
-                        stateMachine.TryTransition(GazeServiceState.Error,
+                        stateMachine.TryTransition(GazeServiceState.Stopped,
                             new GazeServiceError("STUCK_WORKER", "Worker thread failed to terminate during Stop()."));
                         ConnectionStatusChanged?.Invoke(this, false);
                         return;
