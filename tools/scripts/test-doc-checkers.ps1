@@ -22,13 +22,8 @@ New-Item -ItemType Directory -Path $testTempRoot | Out-Null
 Write-Host "Running documentation link checker self-tests under: $testTempRoot"
 
 function Invoke-CheckerOnDirectory([string]$dir) {
-    try {
-        & $checkerScript -RepoRoot $dir 2>&1 | Out-Null
-        return $true
-    }
-    catch {
-        return $false
-    }
+    & pwsh -NoProfile -File $checkerScript -RepoRoot $dir *>$null
+    return ($LASTEXITCODE -eq 0)
 }
 
 $allPassed = $true
