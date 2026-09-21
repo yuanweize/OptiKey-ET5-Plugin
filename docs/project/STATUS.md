@@ -3,9 +3,9 @@
 # Project Status & Readiness
 
 - **Status Date**: 2026-09-21
-- **Current Published Version**: `v0.1.0` (Historical Released Baseline)
-- **Patch Candidate**: `v0.1.1` (Release Candidate Validated)
-- **Active PR**: PR #5 (`audit/v0.1.1-hardening` -> `main`)
+- **Current Published Version**: `v0.1.1` (Released)
+- **Baseline Release**: `v0.1.0` (Historical Released Baseline)
+- **Active Branch**: `main`
 
 This document is the canonical readiness dashboard. It explicitly distinguishes automated Windows CI validation from physical hardware validation, runtime containment from native execution bounds, and legal positioning.
 
@@ -15,10 +15,10 @@ This document is the canonical readiness dashboard. It explicitly distinguishes 
 
 | Domain | Status | Evidence Classification & Details |
 |:---|:---|:---|
-| **Windows CI Matrix** | **CI VERIFIED** | Validated across both `upstream-main` and `pinned-stable` configurations on Windows Server 2022. Post-v0.1.0 hardening runs (`35631685399`) passed all build and test steps. |
-| **Automated Test Suite** | **UNIT / INTEGRATION VERIFIED** | Expanded test suite covers runtime trust integrity, non-blocking callback disposal, configuration precedence, subscription transitions, coordinate mapping, and synthetic E2E streaming with zero failures and zero unhandled exceptions. |
+| **Windows CI Matrix** | **CI VERIFIED** | Validated across both `upstream-main` and `pinned-stable` configurations on Windows Server 2022. Post-v0.1.0 hardening runs (`35631685399`, `35647664281`) passed all build and test steps. |
+| **Automated Test Suite** | **UNIT / INTEGRATION VERIFIED** | Expanded test suite (155 tests) covers runtime trust integrity, non-blocking callback disposal, configuration precedence, subscription transitions, coordinate mapping, and synthetic E2E streaming with zero failures and zero unhandled exceptions. |
 | **OptiKey Plugin Loader** | **INTEGRATION / PACKAGE VERIFIED** | The x64 .NET Framework 4.6 loader harness successfully instantiates `ET5PointService` via parameterless constructor with zero early unmanaged allocation. |
-| **Release ZIP Static Audit** | **PACKAGE VERIFIED** | Release archives strictly contain `LICENSE` and `OptiKey.ET5.Plugin.dll` (v0.1.0 SHA256: `4defb89f7ef20efcbf20a98b712c596c0b6fb1f7b1b2bd0af1b8a917f8b56fd0`). Zero proprietary Tobii DLLs, static libraries, headers, or synthetic test harnesses are packaged. |
+| **Release ZIP Static Audit** | **PACKAGE VERIFIED** | Release archives strictly contain `LICENSE` and `OptiKey.ET5.Plugin.dll` (v0.1.1 SHA256: `55bcd94d3a43b52364952c072d80f580003c115e403d0097d39a33e2a961daf6`). Zero proprietary Tobii DLLs, static libraries, headers, or synthetic test harnesses are packaged. |
 | **Callback Pump Lifecycle** | **SYNTHETIC INTEGRATION VERIFIED** | Managed shutdown timeout and stuck-worker isolation are fully verified under simulated conditions. Disposal deadlocks resolved (locks released prior to worker join). *Note: Native Tobii callback return duration remains runtime dependent and not independently proven.* |
 | **Ordinary User Flow** | **SYNTHETIC INTEGRATION VERIFIED** | Automatic single-device candidate selection enabled by default for seamless plug-and-play. Multi-device safety guard strictly refuses silent connection if multiple candidates exist. *Note: Identifies a single compatible Tobii Stream Engine runtime candidate; exact physical ET5 model confirmation requires hardware introspection.* |
 | **Runtime Discovery & Trust** | **UNIT / SYSTEM VERIFIED** | Dynamic discovery locates installed `tobii_stream_engine.dll` from official services and registry. Authenticode verification enforces signature integrity (`SignatureStatus.Valid`), non-revocation, and Tobii signer identity. Distinct from full root chain trust. |
@@ -32,7 +32,7 @@ This document is the canonical readiness dashboard. It explicitly distinguishes 
 
 ## Release Verdict
 
-**Readiness Verdict**: **v0.1.0 RELEASED / v0.1.1 RELEASE CANDIDATE VALIDATED**
+**Readiness Verdict**: **v0.1.1 RELEASED**
 
-- Historical `v0.1.0` remains published on GitHub Releases and is intentionally unmodified to preserve cryptographic release integrity.
-- Critical hardening fixes for post-release audit findings (SEC-01, CONC-01, CONF-01, LIFE-01, LIFE-02, DOC-01, DOC-02) have been validated on PR #5 across full Windows CI matrices and release dry-run packaging prior to merging into main and tagging `v0.1.1`.
+- `v0.1.1` is officially published on GitHub Releases (ZIP SHA256: `55bcd94d3a43b52364952c072d80f580003c115e403d0097d39a33e2a961daf6`).
+- Historical `v0.1.0` remains published on GitHub Releases and is intentionally unmodified to preserve cryptographic release integrity (ZIP SHA256: `4defb89f7ef20efcbf20a98b712c596c0b6fb1f7b1b2bd0af1b8a917f8b56fd0`).
