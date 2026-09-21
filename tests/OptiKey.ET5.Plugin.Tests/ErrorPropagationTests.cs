@@ -261,13 +261,14 @@ namespace OptiKey.ET5.Plugin.Tests
 
         #region Helper: fake error provider
 
+#pragma warning disable CS0067, CS0414
         private class FakeErrorProvider : IGazeProvider
         {
             public event EventHandler<GazePointEventArgs> GazePointAvailable;
             public event EventHandler<Exception> ErrorOccurred;
             public event EventHandler<bool> ConnectionStatusChanged;
 
-            public bool IsConnected => false;
+            public bool IsConnected => isStarted;
 
             private bool isStarted;
 
@@ -291,6 +292,7 @@ namespace OptiKey.ET5.Plugin.Tests
                 isStarted = false;
             }
         }
+#pragma warning restore CS0067, CS0414
 
         #endregion
     }
