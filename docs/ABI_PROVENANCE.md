@@ -22,7 +22,7 @@ The repository does not contain Tobii proprietary headers or binaries. The table
 
 ## Structs and enums
 
-- `tobii_device_info_t` remains intentionally unresolved. The previous fixed-size managed string struct was removed from the active binding because its field layout and sizes were not proven.
+- `tobii_device_info_t` remains intentionally unresolved. The previous fixed-size managed string struct and all `TryGetDeviceInfo` production interface code were removed because its field layout and sizes were not proven.
 - `tobii_gaze_point_t`, `tobii_error_t`, `tobii_validity_t`, and `tobii_field_of_use_t` remain declarations requiring versioned-header confirmation before hardware use.
 - No Tobii proprietary source or historical wrapper code was copied into this repository.
 

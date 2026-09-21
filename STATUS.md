@@ -11,8 +11,11 @@ This is the canonical readiness summary. It is intentionally conservative becaus
 | Test project | Compiled | The NUnit test project compiles in the Windows CI build. |
 | Test execution | Previously INVALID | Historical VSTest output reported zero tests discovered. The new TRX-enforcing runner is present but requires a new completed run to prove total > 0. |
 | Synthetic tests | Source tests present | NUnit tests cover mapping, state transitions, lifecycle, and synthetic point delivery. |
-| Windows CI | In validation | Run `35545932333` passed pinned-stable build/package/ZIP audit, but the old PowerShell loader gate failed; the current branch contains the net46 harness and shared test runner. |
-| Packaged loader | Implemented, pending rerun | The net46 x64 harness is wired as a distinct gate; no successful harness result exists yet. |
+| Windows CI | VERIFIED | Run `35578818780` succeeded for both pinned-stable and upstream-main. |
+| Test execution | VERIFIED | Both TRX artifacts report `total=26 executed=26 passed=26 failed=0 skipped=0`. |
+| Package generation | VERIFIED | Pinned-stable generated `OptiKey-ET5-Plugin-v0.0.0-ci.21.zip`. |
+| ZIP static audit | VERIFIED | Archive contains exactly `LICENSE` and `OptiKey.ET5.Plugin.dll`. |
+| Packaged loader | VERIFIED | Net46 x64 harness passed against the exact generated ZIP and pinned Contracts assembly. |
 | Tobii ABI | Partially verified | Several signatures match the local research document, but no authoritative versioned header or hardware run was available. `tobii_get_device_info` is disabled. |
 | Real Tobii runtime | UNVERIFIED | No Tobii runtime is installed in this environment. |
 | ET5 hardware | UNVERIFIED | No physical ET5 session has been performed. |
@@ -23,10 +26,10 @@ This is the canonical readiness summary. It is intentionally conservative becaus
 | Legal compatibility | AWAITING CLARIFICATION | Tobii policy for this consumer-device assistive use has not been confirmed. |
 | License file | Verified | Replaced with the SPDX GPL-3.0-only text; SHA256 is `fb981668c18a279e285fc4d83fba1e836cc84dd4daa73c9697d3cfd2d8aca6e0`. |
 | log4net | Removed | No plugin PackageReference or release payload entry remains. |
-| Rx packaging | Host-provided | Rx 2.2.5 remains a compile-time dependency; Rx DLLs are excluded from the release ZIP and resolved from the host harness directory. |
+| Rx packaging | Host-provided | Rx 2.2.5 remains a compile-time dependency; Rx DLLs are excluded from the release ZIP and the net46 harness resolves host dependencies. |
 
 ## Release decision
 
 Readiness verdict: **NOT READY**.
 
-No GitHub release or tag was created. Stable releases are blocked in the release workflow. A prerelease must still wait for actual test execution, a passing packaged-loader gate, ABI/shutdown review, and a controlled hardware session. Do not rely on this software as the sole communication method.
+No GitHub release or tag was created. Stable releases are blocked in the release workflow. A prerelease must still wait for ABI/shutdown review and a controlled hardware session. Do not rely on this software as the sole communication method.
