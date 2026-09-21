@@ -21,8 +21,9 @@ New-Item -ItemType Directory -Path $testTempRoot | Out-Null
 
 Write-Host "Running documentation link checker self-tests under: $testTempRoot"
 
+$lastOutput = ""
 function Invoke-CheckerOnDirectory([string]$dir) {
-    & pwsh -NoProfile -File $checkerScript -RepoRoot $dir *>$null
+    $script:lastOutput = (& pwsh -NoProfile -File $checkerScript -RepoRoot $dir 2>&1 | Out-String)
     return ($LASTEXITCODE -eq 0)
 }
 
@@ -81,19 +82,19 @@ try {
     # Case 5: Path inside fenced code block must PASS
     $case5Dir = Join-Path $testTempRoot "Case5_FencedExample"
     New-Item -ItemType Directory -Path $case5Dir | Out-Null
-    $fencedContent = @"
-# Fenced Example
-```
-C:\Users\bob\sample.txt
-file:///Users/bob/sample.txt
-```
-"@
-    Set-Content -Path (Join-Path $case5Dir "source.md") -Value $fencedContent
+    $fencedLines = @(
+        '# Fenced Example',
+        '```',
+        'C:\Users\bob\sample.txt',
+        'file:///Users/bob/sample.txt',
+        '```'
+    )
+    Set-Content -Path (Join-Path $case5Dir "source.md") -Value $fencedLines
     $res5 = Invoke-CheckerOnDirectory $case5Dir
     if ($res5) {
         Write-Host "  [PASS] Case 5: Path inside fenced code block passed as expected." -ForegroundColor Green
     } else {
-        Write-Host "  [FAIL] Case 5: Path inside fenced code block unexpectedly failed." -ForegroundColor Red
+        Write-Host "  [FAIL] Case 5: Path inside fenced code block unexpectedly failed: $script:lastOutput" -ForegroundColor Red
         $allPassed = $false
     }
 }
