@@ -7,6 +7,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - Unreleased
+
+### Security
+- Enforce strict Authenticode cryptographic signature integrity (`SignatureStatus.Valid`) and non-revocation in `TobiiRuntimeLocator` before accepting candidate binaries (SEC-01).
+- Prevent local filesystem username leakage in diagnostic and trace logs via `PathSanitizer` (PRIV-01).
+
+### Fixed
+- Eliminate self-induced lock contention and potential deadlocks during callback pump `Dispose()` by releasing `stateLock` prior to joining worker threads (CONC-01).
+- Enforce strict configuration precedence: Defaults -> Config File -> Environment Variable Overrides across all 6 configuration properties (CONF-01).
+- Correct `ET5PointService.Point` subscription lifecycle so that `gazeProvider.Start()` is invoked strictly on the 0 -> 1 subscriber transition rather than on every subscriber addition (LIFE-01).
+- Release `eventLock` before invoking `gazeProvider.Dispose()` in `ET5PointService` to eliminate lock inversion hazards (LIFE-02).
+- Correct OptiKey plugin manual installation directory path to `%APPDATA%\OptiKey\OptiKey\EyeTrackerPlugins\OptiKey-ET5-Plugin\` matching current upstream OptiKey source (DOC-02).
+- Strengthen `check-doc-links.ps1` to detect and fail on machine-local `file://` URIs and absolute paths outside code fences (DOC-01).
+- Fix obsolete native binding file reference in `AGENTS.md` Mandate 17 (SOP-01).
+
+### Changed
+- Clarify device candidate selection and ABI documentation: distinguish single compatible Tobii Stream Engine candidates from verified physical ET5 hardware detection (ABI-01, ID-01).
+- Accurately qualify callback shutdown claims: distinguish CI-verified managed shutdown timeout containment from runtime-dependent native callback return duration.
+
 ## [0.1.0] - 2026-09-21
 
 ### Added

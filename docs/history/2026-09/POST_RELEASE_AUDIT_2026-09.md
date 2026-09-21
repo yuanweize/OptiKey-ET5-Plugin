@@ -28,19 +28,19 @@ Every handoff lead was independently verified against active code and live GitHu
 
 | Finding ID | Severity | Category | Target Component | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **SEC-01** | **P0** | Security | `TobiiRuntimeLocator.cs` | Identified / Pending Fix |
-| **CONC-01** | **P0** | Concurrency | `ProcessOnlyPollingPump.cs`, `WaitAndProcessCallbackPump.cs` | Identified / Pending Fix |
-| **CONF-01** | **P1** | Architecture | `PluginConfiguration.cs` | Identified / Pending Fix |
-| **LIFE-01** | **P1** | Lifecycle | `ET5PointService.cs` | Identified / Pending Fix |
-| **LIFE-02** | **P1** | Concurrency | `ET5PointService.cs` | Identified / Pending Fix |
-| **DOC-01** | **P1** | CI / Docs | `check-doc-links.ps1`, `CALLBACK_RESEARCH.md` | Identified / Pending Fix |
-| **DOC-02** | **P1** | Integration | `INSTALLATION.md`, `README.md`, user guides | Identified / Pending Fix |
-| **ABI-01** | **P2** | Consistency | `ABI_PROVENANCE.md` | Identified / Pending Fix |
-| **ID-01** | **P2** | Accuracy | `README.md`, `STATUS.md`, Release notes | Identified / Pending Fix |
-| **SHUT-01** | **P2** | Accuracy | `CALLBACK_RESEARCH.md`, `PluginConfiguration.cs` | Identified / Pending Fix |
-| **SOP-01** | **P2** | Documentation | `AGENTS.md`, `AGENTS.zh-CN.md` | Identified / Pending Fix |
-| **PRIV-01** | **P2** | Privacy | `TobiiRuntimeLocator.cs`, `TobiiStreamEngineBinding.cs` | Identified / Pending Fix |
-| **CI-01** | **P2** | CI / Automation | `.github/workflows/build-and-test.yml` | Identified / Pending Fix |
+| **SEC-01** | **P0** | Security | `TobiiRuntimeLocator.cs` | **FIXED** (Verified by `RuntimeTrustVerifierTests`) |
+| **CONC-01** | **P0** | Concurrency | `ProcessOnlyPollingPump.cs`, `WaitAndProcessCallbackPump.cs` | **FIXED** (Verified by `CallbackShutdownTests`) |
+| **CONF-01** | **P1** | Architecture | `PluginConfiguration.cs` | **FIXED** (Verified by `ConfigurationPrecedenceTests`) |
+| **LIFE-01** | **P1** | Lifecycle | `ET5PointService.cs` | **FIXED** (Verified by `PointServiceSubscriptionLifecycleTests`) |
+| **LIFE-02** | **P1** | Concurrency | `ET5PointService.cs` | **FIXED** (Verified by `PointServiceSubscriptionLifecycleTests`) |
+| **DOC-01** | **P1** | CI / Docs | `check-doc-links.ps1`, `CALLBACK_RESEARCH.md` | **FIXED** (Verified by `test-doc-checkers.ps1`) |
+| **DOC-02** | **P1** | Integration | `INSTALLATION.md`, `README.md`, user guides | **FIXED** (Aligned with upstream OptiKey source) |
+| **ABI-01** | **P2** | Consistency | `ABI_PROVENANCE.md` | **FIXED** (Synchronized with provider behavior) |
+| **ID-01** | **P2** | Accuracy | `README.md`, `STATUS.md`, Release notes | **FIXED** (Clarified candidate vs hardware identity) |
+| **SHUT-01** | **P2** | Accuracy | `CALLBACK_RESEARCH.md`, `PluginConfiguration.cs` | **FIXED** (Qualified managed vs native shutdown bounds) |
+| **SOP-01** | **P2** | Documentation | `AGENTS.md`, `AGENTS.zh-CN.md` | **FIXED** (Corrected binding filename in Mandate 17) |
+| **PRIV-01** | **P2** | Privacy | `TobiiRuntimeLocator.cs`, `TobiiStreamEngineBinding.cs` | **FIXED** (Verified by `PathSanitizerTests`) |
+| **CI-01** | **P2** | CI / Automation | `.github/workflows/build-and-test.yml` | **FIXED** (Branch pattern and self-test step added) |
 | **CI-02** | **P2** | CI Supply Chain | Node.js 20 deprecations in GitHub Actions | Documented / Tracked |
 | **GOV-01** | **P2** | Governance | GitHub branch protection rules on `main` | Documented / Recommended |
 

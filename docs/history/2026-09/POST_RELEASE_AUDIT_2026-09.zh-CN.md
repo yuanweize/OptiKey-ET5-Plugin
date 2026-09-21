@@ -28,19 +28,19 @@
 
 | 缺陷 ID | 严重级别 | 类别 | 目标组件 | 状态 |
 | :--- | :--- | :--- | :--- | :--- |
-| **SEC-01** | **P0** | 安全 | `TobiiRuntimeLocator.cs` | 已确认 / 待修复 |
-| **CONC-01** | **P0** | 并发 | `ProcessOnlyPollingPump.cs`, `WaitAndProcessCallbackPump.cs` | 已确认 / 待修复 |
-| **CONF-01** | **P1** | 架构 | `PluginConfiguration.cs` | 已确认 / 待修复 |
-| **LIFE-01** | **P1** | 生命周期 | `ET5PointService.cs` | 已确认 / 待修复 |
-| **LIFE-02** | **P1** | 并发 | `ET5PointService.cs` | 已确认 / 待修复 |
-| **DOC-01** | **P1** | CI / 文档 | `check-doc-links.ps1`, `CALLBACK_RESEARCH.zh-CN.md` | 已确认 / 待修复 |
-| **DOC-02** | **P1** | 集成 | `INSTALLATION.zh-CN.md`, `README.zh-CN.md`, 用户指南 | 已确认 / 待修复 |
-| **ABI-01** | **P2** | 一致性 | `ABI_PROVENANCE.zh-CN.md` | 已确认 / 待修复 |
-| **ID-01** | **P2** | 准确性 | `README.zh-CN.md`, `STATUS.zh-CN.md`, 发布说明 | 已确认 / 待修复 |
-| **SHUT-01** | **P2** | 准确性 | `CALLBACK_RESEARCH.zh-CN.md`, `PluginConfiguration.cs` | 已确认 / 待修复 |
-| **SOP-01** | **P2** | 规范文档 | `AGENTS.md`, `AGENTS.zh-CN.md` | 已确认 / 待修复 |
-| **PRIV-01** | **P2** | 隐私 | `TobiiRuntimeLocator.cs`, `TobiiStreamEngineBinding.cs` | 已确认 / 待修复 |
-| **CI-01** | **P2** | CI 自动化 | `.github/workflows/build-and-test.yml` | 已确认 / 待修复 |
+| **SEC-01** | **P0** | 安全 | `TobiiRuntimeLocator.cs` | **已修复**（由 `RuntimeTrustVerifierTests` 验证） |
+| **CONC-01** | **P0** | 并发 | `ProcessOnlyPollingPump.cs`, `WaitAndProcessCallbackPump.cs` | **已修复**（由 `CallbackShutdownTests` 验证） |
+| **CONF-01** | **P1** | 架构 | `PluginConfiguration.cs` | **已修复**（由 `ConfigurationPrecedenceTests` 验证） |
+| **LIFE-01** | **P1** | 生命周期 | `ET5PointService.cs` | **已修复**（由 `PointServiceSubscriptionLifecycleTests` 验证） |
+| **LIFE-02** | **P1** | 并发 | `ET5PointService.cs` | **已修复**（由 `PointServiceSubscriptionLifecycleTests` 验证） |
+| **DOC-01** | **P1** | CI / 文档 | `check-doc-links.ps1`, `CALLBACK_RESEARCH.zh-CN.md` | **已修复**（由 `test-doc-checkers.ps1` 验证） |
+| **DOC-02** | **P1** | 集成 | `INSTALLATION.zh-CN.md`, `README.zh-CN.md`, 用户指南 | **已修复**（与 OptiKey 上游源码对齐） |
+| **ABI-01** | **P2** | 一致性 | `ABI_PROVENANCE.zh-CN.md` | **已修复**（与提供者实际行为对齐） |
+| **ID-01** | **P2** | 准确性 | `README.zh-CN.md`, `STATUS.zh-CN.md`, 发布说明 | **已修复**（规范化运行时候选与硬件型号表述） |
+| **SHUT-01** | **P2** | 准确性 | `CALLBACK_RESEARCH.zh-CN.md`, `PluginConfiguration.cs` | **已修复**（严格限定托管停机保护与原生耗时边界） |
+| **SOP-01** | **P2** | 规范文档 | `AGENTS.md`, `AGENTS.zh-CN.md` | **已修复**（修正准则 17 原生绑定文件名） |
+| **PRIV-01** | **P2** | 隐私 | `TobiiRuntimeLocator.cs`, `TobiiStreamEngineBinding.cs` | **已修复**（由 `PathSanitizerTests` 验证） |
+| **CI-01** | **P2** | CI 自动化 | `.github/workflows/build-and-test.yml` | **已修复**（已添加分支匹配规则与自测步骤） |
 | **CI-02** | **P2** | CI 供应链 | GitHub Actions 运行器中的 Node.js 20 弃用警告 | 已记录 / 跟踪 |
 | **GOV-01** | **P2** | 仓库治理 | `main` 分支保护规则与自动分支清理 | 已记录 / 建议 |
 
