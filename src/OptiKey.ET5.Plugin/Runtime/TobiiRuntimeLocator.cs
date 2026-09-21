@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using OptiKey.ET5.Plugin.Diagnostics;
+using OptiKey.ET5.Plugin.Runtime.Discovery;
 
 namespace OptiKey.ET5.Plugin.Runtime
 {
@@ -51,11 +52,16 @@ namespace OptiKey.ET5.Plugin.Runtime
         private const ushort IMAGE_FILE_MACHINE_AMD64 = 0x8664;
         private readonly IPluginLogger logger;
         private readonly IEnumerable<string> customProbePaths;
+        private readonly CompositeRuntimeDiscovery discovery;
 
-        public TobiiRuntimeLocator(IPluginLogger logger = null, IEnumerable<string> customProbePaths = null)
+        public TobiiRuntimeLocator(
+            IPluginLogger logger = null,
+            IEnumerable<string> customProbePaths = null,
+            CompositeRuntimeDiscovery discovery = null)
         {
             this.logger = logger ?? new PluginLogger(typeof(TobiiRuntimeLocator));
             this.customProbePaths = customProbePaths;
+            this.discovery = discovery ?? CompositeRuntimeDiscovery.CreateDefault(customProbePaths, this.logger);
         }
 
         public RuntimeLocatorResult LocateRuntime()
@@ -102,25 +108,7 @@ namespace OptiKey.ET5.Plugin.Runtime
 
         public IEnumerable<string> GetCandidateProbePaths()
         {
-            var paths = new List<string>();
-
-            if (customProbePaths != null)
-            {
-                paths.AddRange(customProbePaths);
-            }
-
-            string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            string programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-
-            // Whitelist of legitimate Tobii installation directories
-            paths.Add(Path.Combine(programFiles, @"Tobii\Tobii Service\tobii_stream_engine.dll"));
-            paths.Add(Path.Combine(programFiles, @"Tobii\Tobii Eye Tracker 5\tobii_stream_engine.dll"));
-            paths.Add(Path.Combine(programFiles, @"Tobii\Tobii EyeX Config\tobii_stream_engine.dll"));
-            paths.Add(Path.Combine(programFilesX86, @"Tobii\Tobii Eye Tracker 5\x64\tobii_stream_engine.dll"));
-            paths.Add(Path.Combine(localAppData, @"Programs\Tobii\Tobii Eye Tracker 5\tobii_stream_engine.dll"));
-
-            return paths;
+            return discovery.DiscoverAllCandidates();
         }
 
         public static bool VerifyPe64Architecture(string filePath)
