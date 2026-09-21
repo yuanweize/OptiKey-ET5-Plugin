@@ -4,7 +4,9 @@ using System.Reactive;
 using System.Threading;
 using System.Windows;
 using NUnit.Framework;
+using OptiKey.ET5.Plugin.Core;
 using OptiKey.ET5.Plugin.Mapping;
+using OptiKey.ET5.Plugin.Runtime;
 using OptiKey.ET5.Plugin.Synthetic;
 
 namespace OptiKey.ET5.Plugin.Tests
@@ -150,9 +152,9 @@ namespace OptiKey.ET5.Plugin.Tests
             }
         }
 
-        private class NativeCallbackEmittingRuntime : Runtime.ITobiiRuntime
+        private class NativeCallbackEmittingRuntime : ITobiiRuntime
         {
-            private Runtime.tobii_gaze_point_callback_t callback;
+            private tobii_gaze_point_callback_t callback;
             private long timestampUs = 1000000;
             private float x = 0.5f;
             private float y = 0.5f;
@@ -166,7 +168,7 @@ namespace OptiKey.ET5.Plugin.Tests
             public bool ConnectDevice(string url) => true;
             public bool DisconnectDevice() => true;
             public bool ReconnectDevice() => true;
-            public bool SubscribeGaze(Runtime.tobii_gaze_point_callback_t cb)
+            public bool SubscribeGaze(tobii_gaze_point_callback_t cb)
             {
                 this.callback = cb;
                 return true;
@@ -176,25 +178,25 @@ namespace OptiKey.ET5.Plugin.Tests
                 this.callback = null;
                 return true;
             }
-            public Runtime.tobii_error_t WaitForCallbacks()
+            public tobii_error_t WaitForCallbacks()
             {
                 Thread.Sleep(5);
-                return Runtime.tobii_error_t.TOBII_ERROR_NO_ERROR;
+                return tobii_error_t.TOBII_ERROR_NO_ERROR;
             }
-            public Runtime.tobii_error_t ProcessCallbacks()
+            public tobii_error_t ProcessCallbacks()
             {
                 if (callback != null)
                 {
-                    var pt = new Runtime.tobii_gaze_point_t
+                    var pt = new tobii_gaze_point_t
                     {
                         timestamp_us = Interlocked.Add(ref timestampUs, 15000),
-                        validity = Runtime.tobii_validity_t.TOBII_VALIDITY_VALID,
+                        validity = tobii_validity_t.TOBII_VALIDITY_VALID,
                         position_x = x,
                         position_y = y
                     };
                     callback(ref pt, IntPtr.Zero);
                 }
-                return Runtime.tobii_error_t.TOBII_ERROR_NO_ERROR;
+                return tobii_error_t.TOBII_ERROR_NO_ERROR;
             }
             public string GetLastErrorDescription() => "ok";
             public void Dispose() { }
