@@ -3,8 +3,8 @@
 # 项目就绪状态与里程碑 (Project Status)
 
 **更新日期**：2026-09-21  
-**目标里程碑**：首发公开发布版本 `v0.1.0`  
-**当前活动分支**：`dev/et5-native-v2`（准备合并至 `main`）
+**当前版本**：`v0.1.0`（已正式发布）  
+**当前活动分支**：`main`（干净单一分支）
 
 本文件为官方就绪状态看板。用于清晰区分自动化 Windows CI 验证事实、实体硬件实测进展与法律合规依据。
 
@@ -14,10 +14,10 @@
 
 | 评估维度 | 状态 | 实测依据与技术详情 |
 |:---|:---|:---|
-| **Windows CI 构建矩阵** | **已验证 (VERIFIED)** | CI Run `35609329758` 在 `upstream-main` 与 `pinned-stable` 两项契约配置下均全部成功通过。 |
+| **Windows CI 构建矩阵** | **已验证 (VERIFIED)** | CI Run `35611105483`、`35611746478` 与发布工作流 `35612044235` 在 `upstream-main` 与 `pinned-stable` 两个配置下均全部成功通过。 |
 | **自动化测试套件** | **已验证 (VERIFIED)** | **124 项测试运行，124 项通过，0 项失败**。经过完整日志审计，未出现任何未处理异常（Unhandled Exception）、进程崩溃或 `NullReferenceException`。 |
 | **OptiKey 插件加载器** | **已验证 (VERIFIED)** | x64 .NET Framework 4.6 加载器测试成功通过无参构造函数反射实例化 `ET5PointService`，并验证构造阶段零非托管早期分配。 |
-| **Release ZIP 静态审计** | **已验证 (VERIFIED)** | 发布压缩包仅严格包含 `LICENSE` 与 `OptiKey.ET5.Plugin.dll` 两项文件。绝无任何专有 DLL、静态库、头文件或测试桩组件混入。 |
+| **Release ZIP 静态审计** | **已验证 (VERIFIED)** | 发布压缩包仅严格包含 `LICENSE` 与 `OptiKey.ET5.Plugin.dll`（SHA256: `4defb89f7ef20efcbf20a98b712c596c0b6fb1f7b1b2bd0af1b8a917f8b56fd0`）。绝无任何专有 DLL、静态库、头文件或测试桩组件混入。 |
 | **回调泵停机生命周期** | **已验证 (VERIFIED)** | 完整集成了 `ICallbackPump` 架构（轮询模式与等待模式），具备有界停机超时与原生卡死工作线程安全隔离保护机制。 |
 | **普通用户开箱即连流程** | **已验证 (VERIFIED)** | 默认启用单设备候选自动直连，实现零配置即插即用；检测到多设备时严格拒绝静默连接候选 0，确保使用安全。 |
 | **运行时发现与数字签名** | **已验证 (VERIFIED)** | 动态探测系统自动从系统服务和注册表定位官方 `tobii_stream_engine.dll`，并通过 Authenticode `WinVerifyTrust` 校验签名有效性。 |
@@ -30,6 +30,6 @@
 
 ## 发布决议
 
-**就绪状态结论**：**达到首发版本发布标准 (READY FOR INITIAL PUBLIC RELEASE v0.1.0)**
+**就绪状态结论**：**v0.1.0 已发布 (v0.1.0 RELEASED)**
 
-所有见于 `AGENTS.md` 的 20 条工程与治理门禁及 Phase 20 检查项均已完全满足。项目已具备创建 Pull Request 合并至 `main` 并正式发布 `v0.1.0` 的条件。
+首个公开发布版本 `v0.1.0` 已打标、通过全量 CI 门禁验证，并正式发布至 GitHub Releases，附带经过校验的资产哈希与双语发布说明。
