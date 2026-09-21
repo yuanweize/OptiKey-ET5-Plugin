@@ -19,7 +19,7 @@ Naively searching `%PATH%`, the current working directory, or arbitrary user dir
      - `%ProgramFiles%\Tobii\Tobii Service\tobii_stream_engine.dll`
      - `%ProgramFiles%\Tobii\Tobii Eye Tracker 5\tobii_stream_engine.dll`
      - `%ProgramFiles(x86)%\Tobii\Tobii Eye Tracker 5\x64\tobii_stream_engine.dll`
-     - `%LocalAppdata%\Programs\Tobii\Tobii Eye Tracker 5\tobii_stream_engine.dll` (user-scoped installation)
+   - `%LocalAppData%\Programs\Tobii\Tobii Eye Tracker 5\tobii_stream_engine.dll` (user-scoped installation; observed location still requires Windows evidence)
    - Generic searches across `%PATH%` or `Environment.CurrentDirectory` are **explicitly prohibited**.
 2. **Binary Header Verification (x64 Architecture Validation)**:
    Before attempting `LoadLibraryW`, the locator reads the PE (Portable Executable) header of the target file:
@@ -27,8 +27,8 @@ Naively searching `%PATH%`, the current working directory, or arbitrary user dir
    - Verify PE signature `0x00004550` (`PE\0\0`)
    - Verify `Machine == 0x8664` (`IMAGE_FILE_MACHINE_AMD64`)
    Files failing the PE x64 check are rejected immediately without invoking native loaders.
-3. **Digital Signature & Publisher Verification**:
-   The runtime locator queries the Win32 `WinVerifyTrust` / `X509Certificate` API to confirm the DLL is digitally signed by "Tobii AB" or "Tobii Dynavox AB". Unsigned or self-signed binaries trigger security warnings and are rejected by default.
+3. **Signer Metadata Inspection (temporary)**:
+   The current locator inspects signer certificate metadata with `X509Certificate`; this is not full WinVerifyTrust validation. Candidates without accepted Tobii signer metadata are rejected, but chain and signature-integrity validation remain required follow-up work.
 4. **Isolated Native Binding**:
    Native functions are bound using `LoadLibraryW` and `GetProcAddress` rather than static `[DllImport("tobii_stream_engine.dll")]`. This ensures the plugin has full programmatic control over library lifetime, exact path binding, and graceful cleanup when unloading.
 

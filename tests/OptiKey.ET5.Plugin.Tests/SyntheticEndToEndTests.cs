@@ -56,6 +56,7 @@ namespace OptiKey.ET5.Plugin.Tests
 
                 // Removing listener stops stream
                 service.Point -= handler;
+                Assert.IsFalse(syntheticProvider.IsConnected);
             }
         }
 

@@ -89,12 +89,9 @@ namespace OptiKey.ET5.Plugin.Runtime
                     cts.Cancel();
                 }
 
-                if (workerThread != null && workerThread.IsAlive)
+                if (workerThread != null && workerThread.IsAlive && workerThread != Thread.CurrentThread)
                 {
-                    if (!workerThread.Join(1500))
-                    {
-                        logger.Warn("Worker thread did not terminate within timeout.");
-                    }
+                    workerThread.Join();
                     workerThread = null;
                 }
 
@@ -154,17 +151,11 @@ namespace OptiKey.ET5.Plugin.Runtime
                     if (stateMachine.CurrentState == GazeServiceState.Connected)
                     {
                         // Event-driven callback wait (ADR-005)
-                        var waitError = runtime.WaitForCallbacks(timeoutMs: 200);
+                        var waitError = runtime.WaitForCallbacks();
 
                         if (cts.Token.IsCancellationRequested)
                         {
                             break;
-                        }
-
-                        if (waitError == tobii_error_t.TOBII_ERROR_TIMED_OUT)
-                        {
-                            // Expected when no new gaze points arrive within 200ms
-                            continue;
                         }
 
                         if (waitError == tobii_error_t.TOBII_ERROR_NO_ERROR)
@@ -217,26 +208,8 @@ namespace OptiKey.ET5.Plugin.Runtime
                 return false;
             }
 
-            // Connect to first available tracker URL
-            string targetUrl = deviceUrls[0];
-            if (!runtime.ConnectDevice(targetUrl))
-            {
-                return false;
-            }
-
-            // Optional device info logging (Redacting sensitive parts)
-            if (runtime.TryGetDeviceInfo(out tobii_device_info_t info))
-            {
-                logger.Info($"Connected device model: {info.model}, generation: {info.generation}");
-            }
-
-            if (!runtime.SubscribeGaze(nativeGazeCallback))
-            {
-                runtime.DisconnectDevice();
-                return false;
-            }
-
-            return true;
+            logger.Warn("Tobii device identity is not verified; refusing to bind to an unverified device.");
+            return false;
         }
 
         private void HandleStreamError(tobii_error_t error)

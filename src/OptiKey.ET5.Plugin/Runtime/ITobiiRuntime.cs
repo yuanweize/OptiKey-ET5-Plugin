@@ -16,9 +16,8 @@ namespace OptiKey.ET5.Plugin.Runtime
         bool ReconnectDevice();
         bool SubscribeGaze(tobii_gaze_point_callback_t callback);
         bool UnsubscribeGaze();
-        tobii_error_t WaitForCallbacks(int timeoutMs = 250);
+        tobii_error_t WaitForCallbacks();
         tobii_error_t ProcessCallbacks();
-        bool TryGetDeviceInfo(out tobii_device_info_t info);
         string GetLastErrorDescription();
     }
 }

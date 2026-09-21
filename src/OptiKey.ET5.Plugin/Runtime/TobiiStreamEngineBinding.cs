@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using OptiKey.ET5.Plugin.Diagnostics;
 
@@ -52,23 +53,6 @@ namespace OptiKey.ET5.Plugin.Runtime
         public float position_y;
     }
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
-    public struct tobii_device_info_t
-    {
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public string serial_number;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public string model;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public string generation;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public string firmware_version;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-        public string integration_type;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-        public string hw_bl;
-    }
-
     #endregion
 
     #region Delegates
@@ -82,13 +66,15 @@ namespace OptiKey.ET5.Plugin.Runtime
     #endregion
 
     /// <summary>
-    /// Dynamic P/Invoke binding layer for tobii_stream_engine.dll using LoadLibrary / GetProcAddress.
-    /// Ensures isolation, precise path loading, and zero static DLL dependency issues.
+    /// Dynamic binding layer for tobii_stream_engine.dll using a verified absolute path.
     /// </summary>
     public class TobiiStreamEngineBinding : IDisposable
     {
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern IntPtr LoadLibrary(string lpFileName);
+        private const uint LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR = 0x00000100;
+        private const uint LOAD_LIBRARY_SEARCH_DEFAULT_DIRS = 0x00001000;
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode, EntryPoint = "LoadLibraryExW")]
+        private static extern IntPtr LoadLibraryEx(string fileName, IntPtr fileHandle, uint flags);
 
         [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
         private static extern bool FreeLibrary(IntPtr hModule);
@@ -131,9 +117,6 @@ namespace OptiKey.ET5.Plugin.Runtime
         private delegate tobii_error_t tobii_gaze_point_unsubscribe_delegate(IntPtr device);
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate tobii_error_t tobii_get_device_info_delegate(IntPtr device, out tobii_device_info_t device_info);
-
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate IntPtr tobii_error_message_delegate(tobii_error_t error);
 
         private tobii_api_create_delegate fn_tobii_api_create;
@@ -146,7 +129,6 @@ namespace OptiKey.ET5.Plugin.Runtime
         private tobii_device_process_callbacks_delegate fn_tobii_device_process_callbacks;
         private tobii_gaze_point_subscribe_delegate fn_tobii_gaze_point_subscribe;
         private tobii_gaze_point_unsubscribe_delegate fn_tobii_gaze_point_unsubscribe;
-        private tobii_get_device_info_delegate fn_tobii_get_device_info;
         private tobii_error_message_delegate fn_tobii_error_message;
 
         public bool IsLoaded => moduleHandle != IntPtr.Zero;
@@ -164,7 +146,13 @@ namespace OptiKey.ET5.Plugin.Runtime
             }
 
             logger.Info($"Loading native Tobii library from: {libraryPath}");
-            moduleHandle = LoadLibrary(libraryPath);
+            if (!Path.IsPathRooted(libraryPath))
+            {
+                throw new ArgumentException("The Tobii runtime path must be absolute.", nameof(libraryPath));
+            }
+
+            moduleHandle = LoadLibraryEx(libraryPath, IntPtr.Zero,
+                LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
             if (moduleHandle == IntPtr.Zero)
             {
                 int err = Marshal.GetLastWin32Error();
@@ -184,7 +172,6 @@ namespace OptiKey.ET5.Plugin.Runtime
                 fn_tobii_device_process_callbacks = Bind<tobii_device_process_callbacks_delegate>("tobii_device_process_callbacks");
                 fn_tobii_gaze_point_subscribe = Bind<tobii_gaze_point_subscribe_delegate>("tobii_gaze_point_subscribe");
                 fn_tobii_gaze_point_unsubscribe = Bind<tobii_gaze_point_unsubscribe_delegate>("tobii_gaze_point_unsubscribe");
-                fn_tobii_get_device_info = Bind<tobii_get_device_info_delegate>("tobii_get_device_info");
                 fn_tobii_error_message = Bind<tobii_error_message_delegate>("tobii_error_message");
                 return true;
             }
@@ -273,12 +260,6 @@ namespace OptiKey.ET5.Plugin.Runtime
         {
             EnsureLoaded();
             return fn_tobii_gaze_point_unsubscribe(device);
-        }
-
-        public tobii_error_t GetDeviceInfo(IntPtr device, out tobii_device_info_t info)
-        {
-            EnsureLoaded();
-            return fn_tobii_get_device_info(device, out info);
         }
 
         public string GetErrorMessage(tobii_error_t error)

@@ -1,6 +1,6 @@
 # Runtime Research and Tobii Integration Specification
 
-> **Document Status**: Complete & Verified  
+> **Document Status**: Partially verified; hardware, installation layout, and legal compatibility remain unverified
 > **Deliverable Requirement**: User Review Requirement #15  
 > **Target Hardware**: Tobii Eye Tracker 5 (ET5, IS50 series)  
 > **Runtime Target**: Windows 10/11 x64 with Tobii Experience
@@ -38,11 +38,7 @@ When a consumer or assistive user installs the official **Tobii Experience** app
 
 Rather than relying on `%PATH%` or vulnerable relative paths, the plugin uses a deterministic, four-tier resolution pipeline:
 
-1. **Registry Installation Check**:
-   Query Windows 64-bit Registry views:
-   - `HKLM\SOFTWARE\Tobii\Eye Tracker 5` -> `InstallPath`
-   - `HKLM\SOFTWARE\Tobii\Tobii Service` -> `Path`
-   - `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Tobii.EyeTracking.exe`
+1. **Registry Installation Check**: Proposed for the Windows inventory script; the current locator does not implement registry probing.
 2. **Fixed High-Integrity Directory Probing**:
    - `C:\Program Files\Tobii\Tobii Service\tobii_stream_engine.dll`
    - `C:\Program Files\Tobii\Tobii Eye Tracker 5\tobii_stream_engine.dll`
@@ -50,8 +46,7 @@ Rather than relying on `%PATH%` or vulnerable relative paths, the plugin uses a 
    - `C:\Program Files\Tobii\Tobii EyeX Config\tobii_stream_engine.dll`
 3. **PE Header Architecture Validation**:
    Open file stream, parse DOS/PE headers, ensure `Machine == 0x8664` (`IMAGE_FILE_MACHINE_AMD64`). Rejects any 32-bit binary immediately.
-4. **Digital Signature Check**:
-   Validate that the candidate binary has an embedded Authenticode signature issued to "Tobii AB" or "Tobii Dynavox AB".
+4. **Digital Signature Check**: The current locator only inspects embedded certificate metadata and does not perform WinVerifyTrust chain/integrity validation. This is not sufficient to claim Authenticode verification.
 
 ---
 
@@ -177,11 +172,11 @@ To avoid bloat and minimize legal exposure, the plugin binds only the essential 
 
 ## 8. Current Licensing Analysis: What is Permitted vs. Unconfirmed?
 
-### Permitted / Fully Compliant:
-- Distributing original open-source C# code under GPL-3.0.
+### Not established by this repository:
+- Distributing original open-source C# code under GPL-3.0-only.
 - Referencing public, documented C function signatures and structs for runtime dynamic linking.
-- Utilizing the interactive field of use (`TOBII_FIELD_OF_USE_INTERACTIVE`) for real-time accessibility control.
-- Binding to the user's legitimately installed, licensed copy of Tobii Experience on their local Windows machine.
+- Whether the consumer ET5 and current Tobii policies permit this assistive use.
+- Whether the interactive field of use is available for this exact runtime/device combination.
 
 ### Strictly Prohibited & Avoided by this Project:
 - **Zero Redistribution**: We do NOT redistribute `tobii_stream_engine.dll`, `.lib`, `.h`, or any Tobii binaries in git commits or release assets.

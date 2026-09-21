@@ -27,7 +27,9 @@ $forbiddenPatterns = @(
     "\.Tests\.dll$",
     "\.Synthetic\.dll$",
     "\.pdb$",
-    "JuliusSweetland\.OptiKey\.Contracts\.dll$"
+    "JuliusSweetland\.OptiKey\.Contracts\.dll$",
+    "^log4net\.dll$",
+    "^System\.Reactive.*\.dll$"
 )
 
 $violations = @()
@@ -67,6 +69,12 @@ try {
 
     $extractedDlls = Get-ChildItem -Path $sandboxDir -Filter "*.dll" -Recurse
 
+        $unexpectedFiles = Get-ChildItem -Path $sandboxDir -File -Recurse |
+            Where-Object { $_.Name -notin @("OptiKey.ET5.Plugin.dll", "LICENSE") }
+        if ($unexpectedFiles) {
+            throw "Release ZIP verification failed: unexpected payload file(s): $($unexpectedFiles.Name -join ', ')"
+        }
+
     Write-Host "Extracted DLL inventory:" -ForegroundColor Cyan
     foreach ($d in $extractedDlls) {
         Write-Host "  - $($d.Name) ($($d.Length) bytes)"
@@ -75,6 +83,9 @@ try {
     $mainPluginDll = $extractedDlls | Where-Object { $_.Name -eq "OptiKey.ET5.Plugin.dll" }
     if (-not $mainPluginDll) {
         throw "Release ZIP verification failed: 'OptiKey.ET5.Plugin.dll' not found in package!"
+    }
+    if (@($mainPluginDll).Count -ne 1) {
+        throw "Release ZIP verification failed: expected exactly one 'OptiKey.ET5.Plugin.dll', found $(@($mainPluginDll).Count)."
     }
 
     # Verify no test or synthetic assemblies slipped through

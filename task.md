@@ -3,7 +3,7 @@
 ## Phase 1: 仓库基础设施
 - [x] 创建 GitHub 仓库 `yuanweize/OptiKey-ET5-Plugin`
 - [x] 设置 topics: `optikey-plugin`, `optikey`, `tobii`, `eye-tracking`, `accessibility` 等
-- [x] 初始化 .gitignore, LICENSE (GPL-3.0)
+- [x] 初始化 .gitignore, LICENSE (GPL-3.0-only)
 - [x] 创建项目骨架目录结构
 - [x] 创建 ADR-001 到 ADR-007
 - [x] 创建基础文档框架 (LEGAL.md, PRIVACY.md, THIRD_PARTY_NOTICES.md, COMPATIBILITY.md, HARDWARE_VALIDATION.md, TROUBLESHOOTING.md, ROADMAP.md, CHANGELOG.md)
@@ -15,7 +15,7 @@
 - [x] 实现 ET5PointService (hardware-independent parameterless constructor)
 - [x] 实现 SyntheticGazeProvider (独立测试程序集，不进发布包)
 - [x] 实现 GazeServiceStateMachine (Created, Starting, Connected, Reconnecting, Stopping, Stopped, Disposed)
-- [x] 实现 PluginLogger (log4net 封装，隐私零留存)
+- [x] 实现 PluginLogger (TraceSource 封装，隐私零留存)
 - [x] 实现完整的生命周期管理
 - [x] 核心单元测试 (StateMachine, ReconnectPolicy, CoordinateMapper, Security, Synthetic E2E)
 - [x] OptiKey loader 反射兼容性测试 (精确验证单一 IPointService 实现与无参构造函数)

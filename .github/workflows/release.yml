@@ -9,6 +9,8 @@ jobs:
   release:
     name: Build and Publish Release
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -22,6 +24,13 @@ jobs:
 
       - name: Setup VSTest
         uses: darenm/Setup-VSTest@v1.2
+
+      - name: Validate Pre-release Tag
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_name }}" -notmatch "^v\d+\.\d+\.\d+-(alpha|beta|rc)(\.\d+)?$") {
+            throw "Stable release tags are blocked until real ET5 hardware validation is complete. Use a prerelease tag such as v0.1.0-alpha.1."
+          }
 
       - name: Determine Upstream Contracts Reference
         id: contracts-ref
@@ -49,9 +58,13 @@ jobs:
       - name: Run Unit & Integration Tests
         shell: pwsh
         run: |
-          $testDll = (Get-ChildItem -Path tests -Filter "OptiKey.ET5.Plugin.Tests.dll" -Recurse | Where-Object { $_.FullName -match "Release" } | Select-Object -First 1).FullName
-          Write-Host "Executing tests on assembly: $testDll"
-          vstest.console.exe $testDll /Platform:x64
+          .\tools\scripts\run-tests.ps1
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OptiKey-ET5-Plugin-Release-TestResults
+          path: artifacts/test-results/OptiKey.ET5.Plugin.Tests.trx
 
       - name: Package Release ZIP
         id: package
@@ -59,6 +72,14 @@ jobs:
         run: |
           $tag = "${{ github.ref_name }}".TrimStart('v')
           .\tools\scripts\package-release.ps1 -Version "$tag"
+
+      - name: Packaged OptiKey Loader Smoke Test
+        shell: pwsh
+        run: |
+          $zip = (Get-ChildItem -Path artifacts/release -Filter "OptiKey-ET5-Plugin-*.zip" | Select-Object -First 1).FullName
+          $contracts = (Resolve-Path "lib/contracts/JuliusSweetland.OptiKey.Contracts.dll").Path
+          $harness = (Resolve-Path "tools/PackagedLoaderHarness/bin/x64/Release/net46/PackagedLoaderHarness.exe").Path
+          & $harness $zip $contracts (Resolve-Path "tests/OptiKey.ET5.Plugin.Tests/bin/x64/Release/net46").Path
 
       - name: Determine Pre-release Flag
         id: prerelease_check

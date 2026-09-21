@@ -91,7 +91,7 @@ namespace OptiKey.ET5.Plugin.Runtime
 
                 DisconnectDevice();
 
-                logger.Info($"Connecting to Tobii device at URL: {url}");
+                logger.Info("Connecting to selected Tobii device.");
                 lastError = binding.DeviceCreate(apiContext, url, out deviceContext);
                 if (lastError != tobii_error_t.TOBII_ERROR_NO_ERROR)
                 {
@@ -163,7 +163,7 @@ namespace OptiKey.ET5.Plugin.Runtime
             }
         }
 
-        public tobii_error_t WaitForCallbacks(int timeoutMs = 250)
+        public tobii_error_t WaitForCallbacks()
         {
             IntPtr dev;
             lock (syncLock)
@@ -193,21 +193,6 @@ namespace OptiKey.ET5.Plugin.Runtime
             }
 
             return binding.ProcessCallbacks(dev);
-        }
-
-        public bool TryGetDeviceInfo(out tobii_device_info_t info)
-        {
-            lock (syncLock)
-            {
-                if (deviceContext != IntPtr.Zero)
-                {
-                    lastError = binding.GetDeviceInfo(deviceContext, out info);
-                    return lastError == tobii_error_t.TOBII_ERROR_NO_ERROR;
-                }
-            }
-
-            info = default(tobii_device_info_t);
-            return false;
         }
 
         public string GetLastErrorDescription()
