@@ -27,7 +27,9 @@ $forbiddenPatterns = @(
     "\.Tests\.dll$",
     "\.Synthetic\.dll$",
     "\.pdb$",
-    "JuliusSweetland\.OptiKey\.Contracts\.dll$"
+    "JuliusSweetland\.OptiKey\.Contracts\.dll$",
+    "^log4net\.dll$",
+    "^System\.Reactive.*\.dll$"
 )
 
 $violations = @()
@@ -66,6 +68,12 @@ try {
     [System.IO.Compression.ZipFile]::ExtractToDirectory($ZipPath, $sandboxDir)
 
     $extractedDlls = Get-ChildItem -Path $sandboxDir -Filter "*.dll" -Recurse
+
+        $unexpectedFiles = Get-ChildItem -Path $sandboxDir -File -Recurse |
+            Where-Object { $_.Name -notin @("OptiKey.ET5.Plugin.dll", "LICENSE") }
+        if ($unexpectedFiles) {
+            throw "Release ZIP verification failed: unexpected payload file(s): $($unexpectedFiles.Name -join ', ')"
+        }
 
     Write-Host "Extracted DLL inventory:" -ForegroundColor Cyan
     foreach ($d in $extractedDlls) {
