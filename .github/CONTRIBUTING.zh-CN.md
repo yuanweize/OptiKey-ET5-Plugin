@@ -6,7 +6,7 @@
 
 ## 贡献者强制性规范
 
-在提交代码前，请通读 [`AGENTS.md`](AGENTS.md) 与 [`docs/AGENT_SOP.zh-CN.md`](docs/AGENT_SOP.zh-CN.md)。所有贡献者（无论是人类开发者还是 AI 智能体）必须恪守以下底线：
+在提交代码前，请通读 [`AGENTS.zh-CN.md`](../AGENTS.zh-CN.md) 与 [智能体标准操作规范](../docs/development/AGENT_SOP.zh-CN.md)。所有贡献者（无论是人类开发者还是 AI 智能体）必须恪守以下底线：
 
 1. **严禁提交专有二进制文件**：任何情况下均不得提交来自 Tobii 的 `.dll`、`.lib`、`.sys` 或封闭专有头文件。
 2. **严禁记录注视点数据**：绝对不得记录、保存、打印或外发任何原始注视点坐标与设备特征。
@@ -20,11 +20,11 @@
    ```bash
    git checkout -b dev/your-feature-name
    ```
-2. 遵循现有 C# 编码规范及 `docs/adr/` 中的架构决策实现代码。
+2. 遵循现有 C# 编码规范及 [`docs/adr/`](../docs/adr/) 中的架构决策实现代码。
 3. 在 `tests/OptiKey.ET5.Plugin.Tests/` 下添加或更新相应的单元测试。
 4. 运行双语文档对齐检查脚本：
    ```powershell
    pwsh .\tools\scripts\check-doc-sync.ps1
    ```
-5. 使用 `.github/PULL_REQUEST_TEMPLATE.md` 模板向 `main` 提交 Pull Request。
+5. 使用 `PULL_REQUEST_TEMPLATE.md` 模板向 `main` 提交 Pull Request。
 6. 确保全量 Windows CI 矩阵全部通过且日志中无任何未处理异常。
