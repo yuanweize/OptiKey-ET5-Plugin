@@ -111,7 +111,14 @@ namespace OptiKey.ET5.Plugin.PackagedLoaderHarness
             {
                 if (Directory.Exists(sandbox))
                 {
-                    Directory.Delete(sandbox, true);
+                    try
+                    {
+                        Directory.Delete(sandbox, true);
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        Console.WriteLine("Loader sandbox cleanup deferred because .NET Framework retained the loaded assembly.");
+                    }
                 }
             }
         }
