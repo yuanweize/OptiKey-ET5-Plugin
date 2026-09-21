@@ -9,6 +9,11 @@ namespace OptiKey.ET5.Plugin.Runtime
 {
     /// <summary>
     /// Production eye-gaze provider interfacing with Tobii hardware via ITobiiRuntime (ADR-005).
+    ///
+    /// Supports two explicit modes:
+    ///   STRICT MODE (default): refuses to bind when device identity is unverified.
+    ///   DEVELOPER TEST MODE (opt-in): permits controlled testing with an explicitly
+    ///     selected device index/URL. Never auto-selects the first device.
     /// </summary>
     public class TobiiGazeProvider : IGazeProvider
     {
@@ -17,6 +22,7 @@ namespace OptiKey.ET5.Plugin.Runtime
         private readonly IPluginLogger logger;
         private readonly GazeServiceStateMachine stateMachine;
 
+        private PluginConfiguration configuration;
         private Thread workerThread;
         private CancellationTokenSource cts;
         private readonly object lifecycleLock = new object();
@@ -33,12 +39,17 @@ namespace OptiKey.ET5.Plugin.Runtime
             ITobiiRuntime runtime = null,
             IReconnectPolicy reconnectPolicy = null,
             IPluginLogger logger = null,
-            GazeServiceStateMachine stateMachine = null)
+            GazeServiceStateMachine stateMachine = null,
+            PluginConfiguration configuration = null)
         {
             this.logger = logger ?? new PluginLogger(typeof(TobiiGazeProvider));
             this.runtime = runtime ?? new TobiiNativeRuntime(logger: this.logger);
             this.reconnectPolicy = reconnectPolicy ?? new ExponentialBackoffReconnectPolicy();
             this.stateMachine = stateMachine ?? new GazeServiceStateMachine();
+
+            // Configuration is loaded lazily on first Start() if not injected,
+            // to preserve the parameterless ET5PointService constructor contract.
+            this.configuration = configuration;
 
             // Pin delegate to instance field to prevent unmanaged callback crash
             this.nativeGazeCallback = OnNativeGazePoint;
@@ -57,6 +68,12 @@ namespace OptiKey.ET5.Plugin.Runtime
                 {
                     logger.Debug("Worker thread already running.");
                     return;
+                }
+
+                // Lazy configuration load (deferred from constructor)
+                if (configuration == null)
+                {
+                    configuration = PluginConfiguration.Load(logger);
                 }
 
                 cts = new CancellationTokenSource();
@@ -198,6 +215,7 @@ namespace OptiKey.ET5.Plugin.Runtime
         {
             if (!runtime.Initialize())
             {
+                ErrorOccurred?.Invoke(this, ET5PluginException.RuntimeNotFound());
                 return false;
             }
 
@@ -205,11 +223,100 @@ namespace OptiKey.ET5.Plugin.Runtime
             if (!runtime.EnumerateDevices(out deviceUrls) || deviceUrls == null || deviceUrls.Count == 0)
             {
                 logger.Debug("No Tobii devices found on local system.");
+                ErrorOccurred?.Invoke(this, ET5PluginException.DeviceNotFound());
                 return false;
             }
 
-            logger.Warn("Tobii device identity is not verified; refusing to bind to an unverified device.");
-            return false;
+            logger.Info($"Enumerated {deviceUrls.Count} Tobii device candidate(s).");
+
+            // --- STRICT MODE (default) ---
+            if (!configuration.AllowUnverifiedTobiiDevice)
+            {
+                logger.Warn("Strict mode: device identity is not verified; refusing to bind.");
+                ErrorOccurred?.Invoke(this, ET5PluginException.DeviceIdentityUnknown());
+                return false;
+            }
+
+            // --- DEVELOPER TEST MODE (explicit opt-in) ---
+            logger.Warn("*** DEVELOPER TEST MODE ACTIVE ***");
+            logger.Warn("Device identity is NOT verified. NOT FOR PRODUCTION USE.");
+
+            string selectedUrl = ResolveDeviceUrl(deviceUrls);
+            if (selectedUrl == null)
+            {
+                logger.Error("Developer mode: no device index or URL configured. " +
+                    "Set PreferredDeviceIndex or PreferredDeviceUrl to select a device.");
+                ErrorOccurred?.Invoke(this, new ET5PluginException(
+                    ET5ErrorCode.DeviceIdentityUnknown,
+                    "Developer mode requires explicit device selection.",
+                    "AllowUnverifiedTobiiDevice is true but no PreferredDeviceIndex or PreferredDeviceUrl is configured."));
+                return false;
+            }
+
+            // Connect to selected device
+            if (!runtime.ConnectDevice(selectedUrl))
+            {
+                ErrorOccurred?.Invoke(this, ET5PluginException.ConnectionFailed(
+                    runtime.GetLastErrorDescription()));
+                return false;
+            }
+
+            // Subscribe gaze
+            if (!runtime.SubscribeGaze(nativeGazeCallback))
+            {
+                ErrorOccurred?.Invoke(this, ET5PluginException.CallbackFailure(
+                    "Failed to subscribe to gaze point stream."));
+                runtime.DisconnectDevice();
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Resolves the device URL to use based on developer configuration.
+        /// Returns null if no valid selection can be made.
+        ///
+        /// NEVER auto-selects deviceUrls[0] without explicit configuration.
+        /// Device URLs are not logged to protect privacy.
+        /// </summary>
+        private string ResolveDeviceUrl(List<string> deviceUrls)
+        {
+            // Explicit URL takes precedence
+            if (!string.IsNullOrEmpty(configuration.PreferredDeviceUrl))
+            {
+                // Validate the URL exists in the enumerated list
+                if (deviceUrls.Contains(configuration.PreferredDeviceUrl))
+                {
+                    logger.Info("Developer mode: using explicitly configured device URL.");
+                    return configuration.PreferredDeviceUrl;
+                }
+                else
+                {
+                    logger.Warn("Developer mode: configured device URL was not found in enumeration.");
+                    // Fall through to index-based selection
+                }
+            }
+
+            // Index-based selection
+            if (configuration.PreferredDeviceIndex.HasValue)
+            {
+                int idx = configuration.PreferredDeviceIndex.Value;
+                if (idx >= 0 && idx < deviceUrls.Count)
+                {
+                    logger.Info($"Developer mode: selecting device at index {idx} of {deviceUrls.Count}.");
+                    return deviceUrls[idx];
+                }
+                else
+                {
+                    logger.Warn($"Developer mode: PreferredDeviceIndex {idx} is out of range " +
+                        $"(enumerated {deviceUrls.Count} device(s)).");
+                    return null;
+                }
+            }
+
+            // No selection configured
+            return null;
         }
 
         private void HandleStreamError(tobii_error_t error)
@@ -219,6 +326,7 @@ namespace OptiKey.ET5.Plugin.Runtime
                 new GazeServiceError(error.ToString(), runtime.GetLastErrorDescription()));
 
             ConnectionStatusChanged?.Invoke(this, false);
+            ErrorOccurred?.Invoke(this, ET5PluginException.ConnectionLost(error.ToString()));
 
             // Attempt reconnect through native runtime first
             if (!runtime.ReconnectDevice())
