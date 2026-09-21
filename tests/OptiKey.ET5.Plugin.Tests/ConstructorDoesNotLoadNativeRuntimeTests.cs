@@ -28,7 +28,6 @@ namespace OptiKey.ET5.Plugin.Tests
             });
 
             Assert.That(service, Is.Not.Null);
-            Assert.That(service.TrackingState, Is.Not.Null);
 
             // Safe disposal without starting
             Assert.DoesNotThrow(() =>

@@ -285,7 +285,7 @@ namespace OptiKey.ET5.Plugin.Tests
             // Verification 2: State transitioned to Stopped with STUCK_WORKER error
             Assert.That(provider.StateMachine.CurrentState, Is.EqualTo(GazeServiceState.Stopped));
             Assert.That(provider.StateMachine.LastError, Is.Not.Null);
-            Assert.That(provider.StateMachine.LastError.Code, Is.EqualTo("STUCK_WORKER"));
+            Assert.That(provider.StateMachine.LastError.ErrorCode, Is.EqualTo("STUCK_WORKER"));
 
             // Verification 3: Native teardown was skipped to prevent use-after-free
             Assert.That(stuckRuntime.UnsubscribeGazeCalled, Is.False,

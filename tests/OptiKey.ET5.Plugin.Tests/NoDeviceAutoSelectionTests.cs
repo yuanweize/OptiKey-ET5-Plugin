@@ -49,10 +49,11 @@ namespace OptiKey.ET5.Plugin.Tests
             Assert.That(fakeRuntime.ConnectedUrl, Is.Null, "Candidate 0 must NOT be automatically selected");
             Assert.That(fakeRuntime.DeviceWasConnected, Is.False);
 
-            // 2. ErrorOccurred received DeviceIdentityUnknownException
-            Assert.That(errors, Has.Some.TypeOf<DeviceIdentityUnknownException>());
-            var identityEx = errors.Find(e => e is DeviceIdentityUnknownException) as DeviceIdentityUnknownException;
-            Assert.That(identityEx.ErrorCode, Is.EqualTo(ET5ErrorCode.DeviceIdentityUnknown));
+            // 2. ErrorOccurred received ET5PluginException with DeviceIdentityUnknown
+            Assert.That(errors, Has.Some.TypeOf<ET5PluginException>());
+            var identityEx = errors.Find(e => e is ET5PluginException pe && pe.Code == ET5ErrorCode.DeviceIdentityUnknown) as ET5PluginException;
+            Assert.That(identityEx, Is.Not.Null);
+            Assert.That(identityEx.Code, Is.EqualTo(ET5ErrorCode.DeviceIdentityUnknown));
         }
 
         [Test]
@@ -80,7 +81,9 @@ namespace OptiKey.ET5.Plugin.Tests
 
             Assert.That(fakeRuntime.ConnectedUrl, Is.Null, "Even a single candidate must NOT be automatically selected without explicit config");
             Assert.That(fakeRuntime.DeviceWasConnected, Is.False);
-            Assert.That(errors, Has.Some.TypeOf<DeviceIdentityUnknownException>());
+            Assert.That(errors, Has.Some.TypeOf<ET5PluginException>());
+            var identityEx = errors.Find(e => e is ET5PluginException pe && pe.Code == ET5ErrorCode.DeviceIdentityUnknown) as ET5PluginException;
+            Assert.That(identityEx, Is.Not.Null);
         }
 
         [Test]
