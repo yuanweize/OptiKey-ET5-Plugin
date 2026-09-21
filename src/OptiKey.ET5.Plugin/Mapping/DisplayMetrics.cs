@@ -51,8 +51,7 @@ namespace OptiKey.ET5.Plugin.Mapping
                 // Fallback handled below
             }
 
-            // Fallback default: Full HD
-            return new DisplayMetrics(0, 0, 1920, 1080);
+            throw new InvalidOperationException("Unable to read primary display metrics from Windows.");
         }
     }
 }

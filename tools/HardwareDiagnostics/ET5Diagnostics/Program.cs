@@ -78,25 +78,8 @@ namespace OptiKey.ET5.Diagnostics
                     return 4;
                 }
 
-                string targetUrl = deviceUrls[0];
-                Console.Write("[CHECK 5/6] Connecting to Primary Tracker: ");
-                if (runtime.ConnectDevice(targetUrl))
-                {
-                    PrintSuccess("Connected.");
-
-                    if (runtime.TryGetDeviceInfo(out tobii_device_info_t info))
-                    {
-                        Console.WriteLine($"    Model: {info.model ?? "Unknown"}");
-                        Console.WriteLine($"    Generation: {info.generation ?? "Unknown"}");
-                        Console.WriteLine($"    Firmware: {info.firmware_version ?? "Unknown"}");
-                        Console.WriteLine($"    Serial: {RedactSerial(info.serial_number)}");
-                    }
-                }
-                else
-                {
-                    PrintFailure($"Connection failed: {runtime.GetLastErrorDescription()}");
-                    return 5;
-                }
+                PrintFailure("Device identity is not verified; refusing to connect to an arbitrary enumerated device.");
+                return 5;
 
                 // 5. Gaze Subscription and Sample Throughput Check (PRIVACY: Aggregate count only)
                 Console.WriteLine("[CHECK 6/6] Subscribing to Gaze Stream (5-second throughput test)...");

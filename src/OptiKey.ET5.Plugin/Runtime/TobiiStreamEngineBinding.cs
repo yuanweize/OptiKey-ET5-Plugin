@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using OptiKey.ET5.Plugin.Diagnostics;
 
@@ -52,23 +53,6 @@ namespace OptiKey.ET5.Plugin.Runtime
         public float position_y;
     }
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
-    public struct tobii_device_info_t
-    {
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public string serial_number;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public string model;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public string generation;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public string firmware_version;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-        public string integration_type;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-        public string hw_bl;
-    }
-
     #endregion
 
     #region Delegates
@@ -82,13 +66,15 @@ namespace OptiKey.ET5.Plugin.Runtime
     #endregion
 
     /// <summary>
-    /// Dynamic P/Invoke binding layer for tobii_stream_engine.dll using LoadLibrary / GetProcAddress.
-    /// Ensures isolation, precise path loading, and zero static DLL dependency issues.
+    /// Dynamic binding layer for tobii_stream_engine.dll using a verified absolute path.
     /// </summary>
     public class TobiiStreamEngineBinding : IDisposable
     {
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern IntPtr LoadLibrary(string lpFileName);
+        private const uint LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR = 0x00000100;
+        private const uint LOAD_LIBRARY_SEARCH_DEFAULT_DIRS = 0x00001000;
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode, EntryPoint = "LoadLibraryExW")]
+        private static extern IntPtr LoadLibraryEx(string fileName, IntPtr fileHandle, uint flags);
 
         [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
         private static extern bool FreeLibrary(IntPtr hModule);
@@ -160,7 +146,13 @@ namespace OptiKey.ET5.Plugin.Runtime
             }
 
             logger.Info($"Loading native Tobii library from: {libraryPath}");
-            moduleHandle = LoadLibrary(libraryPath);
+            if (!Path.IsPathRooted(libraryPath))
+            {
+                throw new ArgumentException("The Tobii runtime path must be absolute.", nameof(libraryPath));
+            }
+
+            moduleHandle = LoadLibraryEx(libraryPath, IntPtr.Zero,
+                LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
             if (moduleHandle == IntPtr.Zero)
             {
                 int err = Marshal.GetLastWin32Error();

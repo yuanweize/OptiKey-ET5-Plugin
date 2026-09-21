@@ -107,12 +107,6 @@ namespace OptiKey.ET5.Plugin.Tests
                 return tobii_error_t.TOBII_ERROR_NOT_AVAILABLE;
             }
 
-            public bool TryGetDeviceInfo(out tobii_device_info_t info)
-            {
-                info = default(tobii_device_info_t);
-                return false;
-            }
-
             public string GetLastErrorDescription()
             {
                 return "synthetic failure";

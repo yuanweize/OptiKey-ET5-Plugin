@@ -208,27 +208,8 @@ namespace OptiKey.ET5.Plugin.Runtime
                 return false;
             }
 
-            // Connect to first available tracker URL
-            string targetUrl = deviceUrls[0];
-            if (!runtime.ConnectDevice(targetUrl))
-            {
-                return false;
-            }
-
-            if (!runtime.TryGetDeviceInfo(out _))
-            {
-                logger.Warn("Device identity could not be verified safely; refusing to bind to an unverified Tobii device.");
-                runtime.DisconnectDevice();
-                return false;
-            }
-
-            if (!runtime.SubscribeGaze(nativeGazeCallback))
-            {
-                runtime.DisconnectDevice();
-                return false;
-            }
-
-            return true;
+            logger.Warn("Tobii device identity is not verified; refusing to bind to an unverified device.");
+            return false;
         }
 
         private void HandleStreamError(tobii_error_t error)

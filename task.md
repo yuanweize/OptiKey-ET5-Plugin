@@ -15,7 +15,7 @@
 - [x] 实现 ET5PointService (hardware-independent parameterless constructor)
 - [x] 实现 SyntheticGazeProvider (独立测试程序集，不进发布包)
 - [x] 实现 GazeServiceStateMachine (Created, Starting, Connected, Reconnecting, Stopping, Stopped, Disposed)
-- [x] 实现 PluginLogger (log4net 封装，隐私零留存)
+- [x] 实现 PluginLogger (TraceSource 封装，隐私零留存)
 - [x] 实现完整的生命周期管理
 - [x] 核心单元测试 (StateMachine, ReconnectPolicy, CoordinateMapper, Security, Synthetic E2E)
 - [x] OptiKey loader 反射兼容性测试 (精确验证单一 IPointService 实现与无参构造函数)

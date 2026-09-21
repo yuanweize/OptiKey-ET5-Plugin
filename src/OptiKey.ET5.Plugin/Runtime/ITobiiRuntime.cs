@@ -18,7 +18,6 @@ namespace OptiKey.ET5.Plugin.Runtime
         bool UnsubscribeGaze();
         tobii_error_t WaitForCallbacks();
         tobii_error_t ProcessCallbacks();
-        bool TryGetDeviceInfo(out tobii_device_info_t info);
         string GetLastErrorDescription();
     }
 }

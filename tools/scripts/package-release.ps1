@@ -32,7 +32,7 @@ New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
 
 try {
     # Copy essential production files only
-    $allowedFiles = Get-ChildItem -Path $pluginBinDir -Include "OptiKey.ET5.Plugin.dll", "log4net.dll", "System.Reactive*.dll" -Recurse
+    $allowedFiles = Get-ChildItem -Path $pluginBinDir -Include "OptiKey.ET5.Plugin.dll" -Recurse
 
     foreach ($f in $allowedFiles) {
         # Never copy Contracts, Tests, Synthetic, or PDBs into release ZIP

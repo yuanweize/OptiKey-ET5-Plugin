@@ -1,6 +1,5 @@
 using System;
-using System.Reflection;
-using log4net;
+using System.Diagnostics;
 
 namespace OptiKey.ET5.Plugin.Diagnostics
 {
@@ -13,59 +12,40 @@ namespace OptiKey.ET5.Plugin.Diagnostics
     }
 
     /// <summary>
-    /// Logging implementation wrapping log4net with privacy enforcement (PRIVACY.md).
+    /// Minimal host-compatible logger with no plugin-specific logging dependency.
     /// </summary>
     public class PluginLogger : IPluginLogger
     {
-        private readonly ILog log;
+        private readonly TraceSource traceSource;
 
         public PluginLogger(Type declaringType)
         {
-            log = LogManager.GetLogger(declaringType ?? typeof(PluginLogger));
+            traceSource = new TraceSource((declaringType ?? typeof(PluginLogger)).FullName);
         }
 
         public PluginLogger(string loggerName)
         {
-            log = LogManager.GetLogger(Assembly.GetExecutingAssembly(), loggerName ?? "OptiKey.ET5.Plugin");
+            traceSource = new TraceSource(loggerName ?? "OptiKey.ET5.Plugin");
         }
 
         public void Debug(string message)
         {
-            if (log.IsDebugEnabled)
-            {
-                log.Debug(message);
-            }
+            traceSource.TraceEvent(TraceEventType.Verbose, 0, message ?? string.Empty);
         }
 
         public void Info(string message)
         {
-            if (log.IsInfoEnabled)
-            {
-                log.Info(message);
-            }
+            traceSource.TraceEvent(TraceEventType.Information, 0, message ?? string.Empty);
         }
 
         public void Warn(string message)
         {
-            if (log.IsWarnEnabled)
-            {
-                log.Warn(message);
-            }
+            traceSource.TraceEvent(TraceEventType.Warning, 0, message ?? string.Empty);
         }
 
         public void Error(string message, Exception ex = null)
         {
-            if (log.IsErrorEnabled)
-            {
-                if (ex != null)
-                {
-                    log.Error(message, ex);
-                }
-                else
-                {
-                    log.Error(message);
-                }
-            }
+            traceSource.TraceEvent(TraceEventType.Error, 0, ex == null ? message : message + " " + ex.Message);
         }
     }
 }

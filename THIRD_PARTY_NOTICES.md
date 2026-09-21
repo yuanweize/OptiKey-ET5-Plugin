@@ -12,15 +12,9 @@ This project references and builds upon open-source software and community speci
 - **Copyright**: .NET Foundation and Contributors
 - **License**: MIT License / Apache License 2.0
 - **Website**: https://github.com/dotnet/reactive
-- **Usage**: Event streaming primitives (`Timestamped<T>`).
+- **Usage**: Compile-time contract type (`Timestamped<T>`); the release package does not redistribute Rx assemblies because the OptiKey host supplies the pinned Rx runtime.
 
-## 3. log4net
-- **Copyright**: Copyright 2004-2024 The Apache Software Foundation
-- **License**: Apache License, Version 2.0
-- **Website**: https://logging.apache.org/log4net/
-- **Usage**: Diagnostic logging compatible with OptiKey host logging configuration.
-
-## 4. Tobii Stream Engine Specification
+## 3. Tobii Stream Engine Specification
 - **Copyright**: Tobii AB
 - **Website**: https://developer.tobii.com/
 - **Notice**: C API declarations referenced for runtime dynamic linking under documented public APIs. No proprietary binaries or closed header code are distributed with this software.
