@@ -16,7 +16,7 @@
 ### 例外说明
 - `LICENSE`：权威的 GNU 通用公共许可证第 3 版（GPL-3.0）文本必须保持标准英文，不得篡改或用翻译版本替代。中文的说明仅能作为非正式辅助文档存在。
 - `OPTIKEY_CONTRACT_REF`：技术性上游契约提交 SHA 锁定文件。
-- `.github/` 下的 CI 工作流定义等纯配置代码（模板类除外）。
+- `.github/workflows/` 下的 CI 自动化工作流文件、`.github/ISSUE_TEMPLATE/` 下的工单模板以及 `.github/PULL_REQUEST_TEMPLATE.md` PR 模板。
 
 ## 3. 强制语言切换导航头
 

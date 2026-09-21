@@ -145,7 +145,10 @@ namespace OptiKey.ET5.Plugin.Runtime
                 }
                 else
                 {
-                    state = CallbackPumpState.TimedOut;
+                    if (state != CallbackPumpState.Disposed)
+                    {
+                        state = CallbackPumpState.TimedOut;
+                    }
                     logger?.Error(
                         $"CRITICAL: WaitAndProcessCallbackPump worker did not exit within {timeout.TotalSeconds:F1}s. " +
                         "Native thread is potentially stuck in tobii_wait_for_callbacks. " +
@@ -207,7 +210,7 @@ namespace OptiKey.ET5.Plugin.Runtime
 
                 lock (stateLock)
                 {
-                    if (state != CallbackPumpState.Faulted && state != CallbackPumpState.TimedOut)
+                    if (state != CallbackPumpState.Faulted && state != CallbackPumpState.TimedOut && state != CallbackPumpState.Disposed)
                     {
                         state = CallbackPumpState.Stopped;
                     }
@@ -223,6 +226,7 @@ namespace OptiKey.ET5.Plugin.Runtime
 
         public void Dispose()
         {
+            Thread threadToJoin;
             lock (stateLock)
             {
                 if (state == CallbackPumpState.Disposed)
@@ -231,8 +235,27 @@ namespace OptiKey.ET5.Plugin.Runtime
                 }
 
                 RequestStop();
-                Join(TimeSpan.FromMilliseconds(500));
-                state = CallbackPumpState.Disposed;
+                threadToJoin = workerThread;
+                workerThread = null;
+            }
+
+            // Invariant: Never hold stateLock while joining the worker thread (CONC-01)
+            if (threadToJoin != null && threadToJoin.IsAlive && threadToJoin != Thread.CurrentThread)
+            {
+                threadToJoin.Join(TimeSpan.FromMilliseconds(500));
+            }
+
+            lock (stateLock)
+            {
+                if (threadToJoin == null || !threadToJoin.IsAlive)
+                {
+                    state = CallbackPumpState.Disposed;
+                }
+                else
+                {
+                    state = CallbackPumpState.TimedOut;
+                    logger?.Warn("Worker thread did not terminate within dispose timeout in WaitAndProcessCallbackPump.");
+                }
             }
         }
     }

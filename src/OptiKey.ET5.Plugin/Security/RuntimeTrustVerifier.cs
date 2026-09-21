@@ -47,7 +47,7 @@ namespace OptiKey.ET5.Plugin.Security
             }
             catch (Exception ex)
             {
-                logger?.Debug($"Failed to extract X509 certificate from '{filePath}': {ex.Message}");
+                logger?.Debug($"Failed to extract X509 certificate from '{PathSanitizer.Sanitize(filePath)}': {ex.Message}");
             }
 
             // 2. Perform WinVerifyTrust chain verification
@@ -131,14 +131,15 @@ namespace OptiKey.ET5.Plugin.Security
                             break;
 
                         case WinVerifyTrustNative.TRUST_E_EXPLICIT_DISTRUST:
+                        case WinVerifyTrustNative.CERT_E_REVOKED:
                             sigStatus = SignatureStatus.Valid;
                             chainStatus = ChainStatus.Revoked;
                             diagMsg = "Certificate has been explicitly revoked or distrusted.";
                             break;
 
                         default:
-                            sigStatus = (signerSubject != null) ? SignatureStatus.Valid : SignatureStatus.Unsigned;
-                            chainStatus = ChainStatus.UntrustedRoot;
+                            sigStatus = (signerSubject != null) ? SignatureStatus.Error : SignatureStatus.Unsigned;
+                            chainStatus = (signerSubject != null) ? ChainStatus.UntrustedRoot : ChainStatus.NotApplicable;
                             diagMsg = $"WinVerifyTrust returned non-zero code: 0x{result:X8}";
                             break;
                     }

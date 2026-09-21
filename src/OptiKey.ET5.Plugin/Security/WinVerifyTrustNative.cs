@@ -22,6 +22,7 @@ namespace OptiKey.ET5.Plugin.Security
         public const int CERT_E_UNTRUSTEDROOT = unchecked((int)0x800B0109);
         public const int CERT_E_CHAINING = unchecked((int)0x800B010A);
         public const int CERT_E_EXPIRED = unchecked((int)0x800B0101);
+        public const int CERT_E_REVOKED = unchecked((int)0x800B010C);
         public const int TRUST_E_EXPLICIT_DISTRUST = unchecked((int)0x800B0111);
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]

@@ -58,7 +58,7 @@
 
 ## 常见问题与排错 (Troubleshooting)
 
-- **OptiKey 中未出现本插件**：检查 `OptiKey.ET5.Plugin.dll` 是否已放置在 `%APPDATA%\OptiKey\OptiKey\Plugins\`。
+- **OptiKey 中未出现本插件**：检查 `OptiKey.ET5.Plugin.dll` 是否已放置在 `%APPDATA%\OptiKey\OptiKey\EyeTrackerPlugins\`（如 `%APPDATA%\OptiKey\OptiKey\EyeTrackerPlugins\OptiKey-ET5-Plugin\OptiKey.ET5.Plugin.dll`）。
 - **提示未找到 Tobii 运行时**：确认官方 Tobii Experience 已安装，且系统服务 `services.msc` 中的 `Tobii Service` 处于运行状态。
 - **OptiKey 呈红色断开状态**：重新拔插 ET5 的 USB 接口，并重启 OptiKey。
 - **独立硬件诊断工具**：运行 `tools/HardwareDiagnostics/diagnose.ps1` 可自动检测运行时路径、架构校验及数字签名。

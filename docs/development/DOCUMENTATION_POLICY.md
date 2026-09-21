@@ -16,7 +16,7 @@ Accessibility and assistive software communities span diverse languages, and thi
 ### Exceptions
 - `LICENSE`: The authoritative GNU General Public License v3.0 text must remain unchanged in canonical English. Unofficial explanatory notes may be provided in separate documentation but must never replace the official license file.
 - `OPTIKEY_CONTRACT_REF`: Technical reference pinning upstream commit hashes.
-- GitHub automation configuration files under `.github/` (except documentation templates).
+- GitHub workflow automation files under `.github/workflows/`, issue forms under `.github/ISSUE_TEMPLATE/`, and `.github/PULL_REQUEST_TEMPLATE.md`.
 
 ## 3. Mandatory Header Format
 

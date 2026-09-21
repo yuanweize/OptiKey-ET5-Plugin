@@ -144,7 +144,10 @@ namespace OptiKey.ET5.Plugin.Runtime
                 }
                 else
                 {
-                    state = CallbackPumpState.TimedOut;
+                    if (state != CallbackPumpState.Disposed)
+                    {
+                        state = CallbackPumpState.TimedOut;
+                    }
                     logger?.Error($"ProcessOnlyPollingPump worker did not exit within {timeout.TotalSeconds:F1}s.");
                     return false;
                 }
@@ -187,7 +190,7 @@ namespace OptiKey.ET5.Plugin.Runtime
 
                 lock (stateLock)
                 {
-                    if (state != CallbackPumpState.Faulted && state != CallbackPumpState.TimedOut)
+                    if (state != CallbackPumpState.Faulted && state != CallbackPumpState.TimedOut && state != CallbackPumpState.Disposed)
                     {
                         state = CallbackPumpState.Stopped;
                     }
@@ -203,6 +206,7 @@ namespace OptiKey.ET5.Plugin.Runtime
 
         public void Dispose()
         {
+            Thread threadToJoin;
             lock (stateLock)
             {
                 if (state == CallbackPumpState.Disposed)
@@ -211,9 +215,35 @@ namespace OptiKey.ET5.Plugin.Runtime
                 }
 
                 RequestStop();
-                Join(TimeSpan.FromMilliseconds(500));
-                stopEvent.Dispose();
-                state = CallbackPumpState.Disposed;
+                threadToJoin = workerThread;
+                workerThread = null;
+            }
+
+            // Invariant: Never hold stateLock while joining the worker thread (CONC-01)
+            if (threadToJoin != null && threadToJoin.IsAlive && threadToJoin != Thread.CurrentThread)
+            {
+                threadToJoin.Join(TimeSpan.FromMilliseconds(500));
+            }
+
+            lock (stateLock)
+            {
+                if (threadToJoin == null || !threadToJoin.IsAlive)
+                {
+                    state = CallbackPumpState.Disposed;
+                    try
+                    {
+                        stopEvent.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.Debug($"Exception disposing stopEvent: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    state = CallbackPumpState.TimedOut;
+                    logger?.Warn("Worker thread did not terminate within dispose timeout; retaining stopEvent to prevent ObjectDisposedException.");
+                }
             }
         }
     }

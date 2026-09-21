@@ -58,7 +58,7 @@ For complete offline installation and multi-device configuration steps, see the 
 
 ## Troubleshooting
 
-- **Plugin not found in OptiKey**: Verify that `OptiKey.ET5.Plugin.dll` is located in `%APPDATA%\OptiKey\OptiKey\Plugins\`.
+- **Plugin not found in OptiKey**: Verify that `OptiKey.ET5.Plugin.dll` is located under `%APPDATA%\OptiKey\OptiKey\EyeTrackerPlugins\` (e.g. `%APPDATA%\OptiKey\OptiKey\EyeTrackerPlugins\OptiKey-ET5-Plugin\OptiKey.ET5.Plugin.dll`).
 - **Runtime Not Found**: Ensure official Tobii Experience is installed and the `Tobii Service` is running in `services.msc`.
 - **Red Disconnected State**: Unplug and reconnect the Eye Tracker 5 USB cable, then re-open OptiKey.
 - **Diagnostic Tool**: Run `tools/HardwareDiagnostics/diagnose.ps1` to inspect runtime discovery, PE architecture, and code signatures.

@@ -71,8 +71,12 @@ namespace OptiKey.ET5.Plugin
             {
                 lock (eventLock)
                 {
+                    bool isFirstSubscriber = (pointEvent == null);
                     pointEvent += value;
-                    EnsureStarted();
+                    if (isFirstSubscriber)
+                    {
+                        EnsureStarted();
+                    }
                 }
             }
             remove
@@ -188,6 +192,8 @@ namespace OptiKey.ET5.Plugin
 
         public void Dispose()
         {
+            IGazeProvider providerToDispose = null;
+
             lock (eventLock)
             {
                 if (isDisposed) return;
@@ -195,24 +201,30 @@ namespace OptiKey.ET5.Plugin
 
                 logger.Info("Disposing ET5PointService...");
 
-                // Unhook events
+                // Unhook events and clear delegates under lock
                 gazeProvider.GazePointAvailable -= OnGazePointAvailable;
                 gazeProvider.ErrorOccurred -= OnProviderErrorOccurred;
 
+                pointEvent = null;
+                errorEvent = null;
+
+                providerToDispose = gazeProvider;
+            }
+
+            // Dispose gaze provider OUTSIDE eventLock to prevent lock inversion/contention (LIFE-02)
+            if (providerToDispose != null)
+            {
                 try
                 {
-                    gazeProvider.Dispose();
+                    providerToDispose.Dispose();
                 }
                 catch (Exception ex)
                 {
                     logger.Warn($"Exception disposing gaze provider: {ex.Message}");
                 }
-
-                pointEvent = null;
-                errorEvent = null;
-
-                logger.Info("ET5PointService disposed cleanly.");
             }
+
+            logger.Info("ET5PointService disposed cleanly.");
         }
 
         #endregion

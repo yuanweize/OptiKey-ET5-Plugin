@@ -43,11 +43,11 @@ If installing in an offline or air-gapped environment:
 1. Download the latest `OptiKey-ET5-Plugin-vX.Y.Z.zip` from [GitHub Releases](https://github.com/yuanweize/OptiKey-ET5-Plugin/releases).
 2. Verify the package SHA256 checksum against `SHA256SUMS.txt`.
 3. Close OptiKey if it is running.
-4. Extract `OptiKey.ET5.Plugin.dll` to your user plugins folder:
+4. Extract the ZIP contents to your user eye tracker plugins folder under a dedicated child directory:
    ```text
-   %APPDATA%\OptiKey\OptiKey\Plugins\
+   %APPDATA%\OptiKey\OptiKey\EyeTrackerPlugins\OptiKey-ET5-Plugin\
    ```
-   *(Note: create the `Plugins` subfolder if it does not already exist).*
+   *(Note: OptiKey scans `%APPDATA%\OptiKey\OptiKey\EyeTrackerPlugins\` recursively for plugin DLLs; creating the dedicated subfolder keeps plugins organized and avoids file collisions).*
 5. Launch OptiKey.
 
 ---
