@@ -28,3 +28,13 @@
 - **注视点结构体 (`tobii_gaze_point_t`)**：
   采用 `LayoutKind.Sequential` 顺序布局，字段包含 `timestamp_us` (Int64)、`validity` (enum 32位)、`position_x` (Single 32位单精度浮点) 与 `position_y` (Single 32位单精度浮点)。
 - **洁净室开发保证**：代码完全为自主编写，不依赖也不侵犯任何第三方闭源专有代码版权。
+
+---
+
+## 设备身份识别状态
+
+提供者将 `deviceUrls[0]` 视为单个兼容的 Tobii 运行时候选设备，而非证明其硬件型号必然为 ET5。当仅枚举到单个兼容候选设备且启用自动选择（默认行为）时，提供者会自动绑定该设备以服务无障碍沟通；当存在多台候选设备时，严格拒绝静默绑定以防止误控。通过已验证的 `tobii_get_device_info` 结构体实现设备具体硬件型号的可靠识别仍属于持续研究课题。
+
+## 回调停机状态
+
+生产默认采用 `ProcessOnlyPollingPump`（结合可中断等待句柄周期性调用 `tobii_device_process_callbacks`）实现托管层有界停机，无需依赖阻塞性的 `tobii_wait_for_callbacks`。托管层的超时与取消保护已通过 CI 自动化验证，而注视流活跃期间的原生执行持续时间仍需在物理硬件上实测评估。

@@ -23,7 +23,7 @@
 14. **双语同步更新 STATUS**：在 [`docs/project/STATUS.md`](docs/project/STATUS.md) 和 [`docs/project/STATUS.zh-CN.md`](docs/project/STATUS.zh-CN.md) 中同步跟踪里程碑进展与就绪状态。
 15. **双语发布说明**：所有 GitHub Release 摘要必须同时包含完整的英文和简体中文内容。
 16. **生产环境杜绝静默合成回退**：本地硬件或运行时失效时，生产代码严禁静默回退到模拟或合成注视点，必须抛出错误事件通知用户。
-17. **绝不凭空臆想本地 ABI**：严格遵循 `TobiiStreamEngineNative.cs` 和 [`docs/research/ABI_PROVENANCE.zh-CN.md`](docs/research/ABI_PROVENANCE.zh-CN.md) 中已验证的 C 声明。
+17. **绝不凭空臆想本地 ABI**：严格遵循 [`src/OptiKey.ET5.Plugin/Runtime/Interop/TobiiStreamEngineBinding.cs`](src/OptiKey.ET5.Plugin/Runtime/Interop/TobiiStreamEngineBinding.cs) 和 [`docs/research/ABI_PROVENANCE.zh-CN.md`](docs/research/ABI_PROVENANCE.zh-CN.md) 中已验证的 C 声明。
 18. **尊重既有架构决策**：在设计新组件或创建新 ADR 之前，必须先检索并审查既有的架构决策记录（[`docs/adr/`](docs/adr/)）。
 19. **原子且富有含义的提交**：保持 commit 小而清晰，并遵循 Conventional Commits 规范（`feat:`, `fix:`, `docs:`, `ci:`）。
 20. **及时清理废弃分支**：PR 合并后，立即删除本地及远端已合并的特性分支。

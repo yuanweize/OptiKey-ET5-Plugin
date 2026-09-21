@@ -49,6 +49,45 @@ namespace OptiKey.ET5.Plugin.Tests
         }
 
         [Test]
+        public void WaitAndProcessPump_DirectDisposeWhileRunning_CompletesPromptlyWithoutHoldingLockAcrossJoin()
+        {
+            // CONC-01: Dispose must NOT hold stateLock while joining worker thread
+            var stopFlag = false;
+            var pump = new WaitAndProcessCallbackPump(
+                waitFunc: () =>
+                {
+                    Thread.Sleep(5);
+                    return tobii_error_t.TOBII_ERROR_NO_ERROR;
+                },
+                processFunc: () => tobii_error_t.TOBII_ERROR_NO_ERROR);
+
+            pump.Start();
+            Thread.Sleep(20);
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            // Directly dispose while actively running
+            pump.Dispose();
+            sw.Stop();
+
+            Assert.That(sw.ElapsedMilliseconds, Is.LessThan(250), "Direct Dispose must not hang on Join lock contention.");
+            Assert.That(pump.State, Is.EqualTo(CallbackPumpState.Disposed));
+        }
+
+        [Test]
+        public void WaitAndProcessPump_RepeatedDispose_IsIdempotentAndSafe()
+        {
+            var pump = new WaitAndProcessCallbackPump(
+                waitFunc: () => tobii_error_t.TOBII_ERROR_NO_ERROR,
+                processFunc: () => tobii_error_t.TOBII_ERROR_NO_ERROR);
+
+            pump.Start();
+            pump.Dispose();
+            Assert.DoesNotThrow(() => pump.Dispose());
+            Assert.DoesNotThrow(() => pump.Dispose());
+            Assert.That(pump.State, Is.EqualTo(CallbackPumpState.Disposed));
+        }
+
+        [Test]
         public void WaitAndProcessPump_StuckWorker_TimesOutGracefully_EntersTimedOutState()
         {
             var enteredWaitEvent = new ManualResetEventSlim(false);
@@ -200,6 +239,40 @@ namespace OptiKey.ET5.Plugin.Tests
             Assert.That(pump.State, Is.EqualTo(CallbackPumpState.Stopped));
 
             pump.Dispose();
+            Assert.That(pump.State, Is.EqualTo(CallbackPumpState.Disposed));
+        }
+
+        [Test]
+        public void PollingPump_DirectDisposeWhileRunning_CompletesPromptlyWithoutHoldingLockAcrossJoin()
+        {
+            // CONC-01: Direct Dispose on a running pump must NOT block for the 500ms timeout
+            var pump = new ProcessOnlyPollingPump(
+                processFunc: () => tobii_error_t.TOBII_ERROR_NO_ERROR,
+                pollIntervalMs: 5);
+
+            pump.Start();
+            Thread.Sleep(20);
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            // Directly dispose while actively polling
+            pump.Dispose();
+            sw.Stop();
+
+            Assert.That(sw.ElapsedMilliseconds, Is.LessThan(250), "Direct Dispose on running polling pump must not hang.");
+            Assert.That(pump.State, Is.EqualTo(CallbackPumpState.Disposed));
+        }
+
+        [Test]
+        public void PollingPump_RepeatedDispose_IsIdempotentAndSafe()
+        {
+            var pump = new ProcessOnlyPollingPump(
+                processFunc: () => tobii_error_t.TOBII_ERROR_NO_ERROR,
+                pollIntervalMs: 5);
+
+            pump.Start();
+            pump.Dispose();
+            Assert.DoesNotThrow(() => pump.Dispose());
+            Assert.DoesNotThrow(() => pump.Dispose());
             Assert.That(pump.State, Is.EqualTo(CallbackPumpState.Disposed));
         }
 

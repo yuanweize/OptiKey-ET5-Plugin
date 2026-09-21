@@ -43,11 +43,11 @@ OptiKey 4.x 支持通过 GitHub 话题标签直接在线搜索并安装插件：
 1. 从 [GitHub Releases](https://github.com/yuanweize/OptiKey-ET5-Plugin/releases) 下载最新的 `OptiKey-ET5-Plugin-vX.Y.Z.zip` 发布包。
 2. 对照 `SHA256SUMS.txt` 核验压缩包的哈希值。
 3. 如果 OptiKey 正在运行，请先完全退出。
-4. 解压出 `OptiKey.ET5.Plugin.dll` 并复制到您的 OptiKey 用户插件目录中：
+4. 将 ZIP 压缩包解压至用户眼动仪插件目录下的独立子文件夹中：
    ```text
-   %APPDATA%\OptiKey\OptiKey\Plugins\
+   %APPDATA%\OptiKey\OptiKey\EyeTrackerPlugins\OptiKey-ET5-Plugin\
    ```
-   *（注：若该目录不存在，可手动创建 `Plugins` 子文件夹）*。
+   *（注：OptiKey 会递归扫描 `%APPDATA%\OptiKey\OptiKey\EyeTrackerPlugins\` 目录；将其置于独立子文件夹便于版本管理并防止文件冲突）*。
 5. 启动 OptiKey。
 
 ---

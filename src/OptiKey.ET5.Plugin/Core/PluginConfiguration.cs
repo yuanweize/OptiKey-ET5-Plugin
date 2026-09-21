@@ -11,7 +11,7 @@ namespace OptiKey.ET5.Plugin.Core
     {
         /// <summary>
         /// Periodic polling using tobii_device_process_callbacks with interruptible wait handle.
-        /// Guaranteed bounded, deterministic shutdown without native thread blocking.
+        /// Managed shutdown containment; native callback execution duration is runtime dependent.
         /// </summary>
         Polling = 0,
 
@@ -27,15 +27,16 @@ namespace OptiKey.ET5.Plugin.Core
     /// and runtime behavior. Loaded lazily on first provider Start(), not during
     /// construction, to preserve the parameterless constructor contract.
     ///
-    /// Configuration is read from (in priority order):
-    /// 1. Environment variable overrides (developer use only)
+    /// Configuration precedence order (CONF-01):
+    /// 1. Built-in defaults
     /// 2. Config file at %APPDATA%\OptiKey-ET5-Plugin\et5-plugin.config (primary)
     ///    or %APPDATA%\OptiKey\OptiKey\ET5Plugin\et5-plugin.config (legacy fallback)
+    /// 3. Environment variable overrides (developer use, highest priority)
     ///
     /// Production default:
-    /// - AutomaticDeviceSelection = true (automatically connects if exactly 1 device is detected)
+    /// - AutomaticDeviceSelection = true (automatically connects if exactly 1 device candidate is detected)
     /// - Multi-device safety = refuses silent auto-binding if multiple devices are detected
-    /// - CallbackStrategy = Polling (guaranteed bounded shutdown)
+    /// - CallbackStrategy = Polling (managed bounded shutdown)
     /// </summary>
     public class PluginConfiguration
     {
@@ -50,8 +51,7 @@ namespace OptiKey.ET5.Plugin.Core
         public bool AutomaticDeviceSelection { get; set; } = true;
 
         /// <summary>
-        /// Callback pump strategy. Default is Polling (ProcessOnlyPollingPump)
-        /// for guaranteed bounded, interruptible shutdown.
+        /// Callback pump strategy. Default is Polling (ProcessOnlyPollingPump).
         /// </summary>
         public CallbackStrategy CallbackStrategy { get; set; } = CallbackStrategy.Polling;
 
@@ -90,7 +90,8 @@ namespace OptiKey.ET5.Plugin.Core
         }
 
         /// <summary>
-        /// Load configuration from environment variables and config file.
+        /// Load configuration following the strict precedence:
+        /// Defaults -> Config File -> Environment Overrides (CONF-01).
         /// This is intentionally lightweight and does not throw on missing/malformed config.
         /// </summary>
         public static PluginConfiguration Load(IPluginLogger logger = null)
@@ -98,11 +99,11 @@ namespace OptiKey.ET5.Plugin.Core
             var config = new PluginConfiguration();
             logger = logger ?? new PluginLogger(typeof(PluginConfiguration));
 
-            // Priority 1: Environment variables (developer override)
-            LoadFromEnvironment(config, logger);
-
-            // Priority 2: Config file (if env vars did not set values)
+            // Precedence step 2: Config file overrides defaults
             LoadFromConfigFile(config, logger);
+
+            // Precedence step 3: Environment variable overrides (highest priority)
+            LoadFromEnvironment(config, logger);
 
             // Log active configuration state (without sensitive values)
             logger.Debug($"PluginConfiguration loaded: AutoSelect={config.AutomaticDeviceSelection}, " +
@@ -259,21 +260,15 @@ namespace OptiKey.ET5.Plugin.Core
 
                         case "preferreddeviceindex":
                         case "selecteddeviceindex":
-                            if (!config.PreferredDeviceIndex.HasValue)
+                            if (int.TryParse(value, out int idx) && idx >= 0)
                             {
-                                if (int.TryParse(value, out int idx) && idx >= 0)
-                                {
-                                    config.PreferredDeviceIndex = idx;
-                                }
+                                config.PreferredDeviceIndex = idx;
                             }
                             break;
 
                         case "preferreddeviceurl":
                         case "selecteddeviceurl":
-                            if (string.IsNullOrEmpty(config.PreferredDeviceUrl))
-                            {
-                                config.PreferredDeviceUrl = value;
-                            }
+                            config.PreferredDeviceUrl = value;
                             break;
 
                         default:

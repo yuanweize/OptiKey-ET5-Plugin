@@ -33,7 +33,7 @@ while (is_running) {
 
 ## 2. Architectural Lifecycle Contract (Enforced in Phase D)
 
-To prevent native memory corruption and use-after-free crashes, the plugin enforces the following strict lifecycle contract in [TobiiGazeProvider.cs](file:///Users/yuanweize/我的文档/服务器/GITHUB/OptiKey-ET5-Plugin/src/OptiKey.ET5.Plugin/Runtime/TobiiGazeProvider.cs) and [WaitAndProcessCallbackPump.cs](file:///Users/yuanweize/我的文档/服务器/GITHUB/OptiKey-ET5-Plugin/src/OptiKey.ET5.Plugin/Runtime/WaitAndProcessCallbackPump.cs):
+To prevent native memory corruption and use-after-free crashes, the plugin enforces the following strict lifecycle contract in [TobiiGazeProvider.cs](../../src/OptiKey.ET5.Plugin/Runtime/TobiiGazeProvider.cs) and [WaitAndProcessCallbackPump.cs](../../src/OptiKey.ET5.Plugin/Runtime/Callbacks/WaitAndProcessCallbackPump.cs):
 
 ```
 +-------------------------------------------------------------+
@@ -73,12 +73,12 @@ Three architectural paths are available:
 ### PATH B: Process-Only Polling Loop (`ProcessOnlyPollingPump`)
 - **Concept**: Bypasses `tobii_wait_for_callbacks()` entirely. Uses `tobii_device_process_callbacks()` on a periodic polling interval (e.g. 5ms) managed via CLR event wait.
 - **Advantages**:
-  - `stopEvent.Set()` unblocks the wait handle immediately (< 1ms).
-  - Clean, deterministic shutdown guaranteed; zero risk of thread hang.
+  - `stopEvent.Set()` unblocks the managed wait handle immediately (< 1ms).
+  - Managed timeout and cancellation containment verified in CI; avoids indefinite blocking in `tobii_wait_for_callbacks`.
 - **Open Empirical Questions**:
   - Does `tobii_device_process_callbacks()` return immediately when no callbacks are queued, returning `TOBII_ERROR_TIMED_OUT` or `TOBII_ERROR_NO_ERROR`?
   - Does skipping `tobii_wait_for_callbacks()` increase CPU usage slightly (e.g. 0.5-1% on modern multicore CPU)?
-- **Verdict**: Viable fallback for in-process execution, implemented in [ProcessOnlyPollingPump.cs](file:///Users/yuanweize/我的文档/服务器/GITHUB/OptiKey-ET5-Plugin/src/OptiKey.ET5.Plugin/Runtime/ProcessOnlyPollingPump.cs).
+- **Verdict**: Viable fallback for in-process execution, implemented in [ProcessOnlyPollingPump.cs](../../src/OptiKey.ET5.Plugin/Runtime/Callbacks/ProcessOnlyPollingPump.cs).
 
 ### PATH C: RuntimeHost Out-of-Process Architecture (`RuntimeHostIsolated`)
 - **Concept**: Dedicated lightweight helper executable (`OptiKey.ET5.RuntimeHost.exe`) that loads `tobii_stream_engine.dll` and streams gaze samples to OptiKey over a local Windows Named Pipe.

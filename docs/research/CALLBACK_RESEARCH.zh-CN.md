@@ -31,7 +31,7 @@ while (is_running) {
 
 ## 2. 严格的架构生命周期契约
 
-为彻底解决该问题，本插件在 [TobiiGazeProvider.cs](file:///Users/yuanweize/我的文档/服务器/GITHUB/OptiKey-ET5-Plugin/src/OptiKey.ET5.Plugin/Runtime/TobiiGazeProvider.cs) 与 [ICallbackPump.cs](file:///Users/yuanweize/我的文档/服务器/GITHUB/OptiKey-ET5-Plugin/src/OptiKey.ET5.Plugin/Core/ICallbackPump.cs) 中建立了严格的生命周期停机保护状态机：
+为彻底解决该问题，本插件在 [TobiiGazeProvider.cs](../../src/OptiKey.ET5.Plugin/Runtime/TobiiGazeProvider.cs) 与 [ICallbackPump.cs](../../src/OptiKey.ET5.Plugin/Core/ICallbackPump.cs) 中建立了严格的生命周期停机保护状态机：
 
 ```
 +-------------------------------------------------------------+
@@ -43,7 +43,7 @@ while (is_running) {
 |                     Join(stopTimeout)                       |
 +-------------------------------------------------------------+
            |                                       |
-     (在超时内正常退出)                       (超出时限未能停止)
+     (超时限额内成功 Join)                     (达到超时限额仍未退出)
            |                                       |
            v                                       v
 +-----------------------+              +-----------------------+
@@ -63,7 +63,7 @@ while (is_running) {
 
 1. **`ProcessOnlyPollingPump` (生产默认方案)**：
    - 依赖可中断的 `ManualResetEventSlim.Wait(pollIntervalMs)` 与 `tobii_device_process_callbacks`。
-   - 绝不进入非托管无限阻塞等待，从根本上保证停机响应的瞬时性与确定性（< 10ms 返回）。
+   - 托管层等待通过信号可实现瞬时中断响应，超时受 CI 严格测试保护；原生底层回调执行耗时由环境与驱动决定。
 2. **`WaitAndProcessCallbackPump` (传统等待方案)**：
    - 采用 `tobii_wait_for_callbacks`。
    - 严格辅以 `STUCK_WORKER` 隔离保护机制，超时绝不执行非法非托管释放。

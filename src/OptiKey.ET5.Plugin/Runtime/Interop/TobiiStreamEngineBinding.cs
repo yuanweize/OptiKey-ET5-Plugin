@@ -170,7 +170,8 @@ namespace OptiKey.ET5.Plugin.Runtime
                 return true;
             }
 
-            logger.Info($"Loading native Tobii library from: {libraryPath}");
+            string safeLibraryPath = PathSanitizer.Sanitize(libraryPath);
+            logger.Info($"Loading native Tobii library from: {safeLibraryPath}");
             if (!Path.IsPathRooted(libraryPath))
             {
                 throw new ArgumentException("The Tobii runtime path must be absolute.", nameof(libraryPath));
@@ -181,7 +182,7 @@ namespace OptiKey.ET5.Plugin.Runtime
             if (moduleHandle == IntPtr.Zero)
             {
                 int err = Marshal.GetLastWin32Error();
-                logger.Error($"Failed to LoadLibrary for {libraryPath}. Win32Error: {err}");
+                logger.Error($"Failed to LoadLibrary for {safeLibraryPath}. Win32Error: {err}");
                 return false;
             }
 

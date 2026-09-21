@@ -84,35 +84,53 @@ namespace OptiKey.ET5.Plugin.Runtime
                     continue;
                 }
 
-                logger.Debug($"Probing candidate Tobii runtime path: {path}");
+                string safePath = PathSanitizer.Sanitize(path);
+                logger.Debug($"Probing candidate Tobii runtime path: {safePath}");
 
                 // 1. Verify PE Architecture (Must be x64 AMD64)
                 if (!VerifyPe64Architecture(path))
                 {
-                    logger.Warn($"Candidate rejected: Not a valid 64-bit (AMD64) PE binary: {path}");
+                    logger.Warn($"Candidate rejected: Not a valid 64-bit (AMD64) PE binary: {safePath}");
                     continue;
                 }
 
-                // 2. Cryptographic Authenticode & Signer Verification (Phase H)
+                // 2. Cryptographic Authenticode & Signer Verification (SEC-01)
                 var trustResult = trustVerifier.VerifyFileTrust(path);
+
+                // 2a. Signature integrity check: must be valid (not hash mismatch, unsigned, or error)
+                if (trustResult.SignatureStatus != SignatureStatus.Valid)
+                {
+                    logger.Warn($"Candidate rejected: Invalid or unverified Authenticode signature: {safePath}. " +
+                        $"Status={trustResult.SignatureStatus}, Details: {trustResult.DiagnosticMessage}");
+                    continue;
+                }
+
+                // 2b. Signer identity check: must match Tobii
                 if (!trustResult.SignerMatchesTobii)
                 {
-                    logger.Warn($"Candidate rejected: Tobii signer verification failed: {path}. " +
-                        $"Subject='{trustResult.SignerSubject ?? "None"}', Status={trustResult.SignatureStatus}");
+                    logger.Warn($"Candidate rejected: Signer does not match Tobii: {safePath}. " +
+                        $"Subject='{trustResult.SignerSubject ?? "None"}'");
+                    continue;
+                }
+
+                // 2c. Revocation check: must not be explicitly revoked/distrusted
+                if (trustResult.ChainStatus == ChainStatus.Revoked)
+                {
+                    logger.Warn($"Candidate rejected: Certificate has been explicitly revoked or distrusted: {safePath}");
                     continue;
                 }
 
                 if (trustResult.ChainStatus != ChainStatus.Trusted)
                 {
-                    logger.Warn($"Notice: Binary signature is valid but certificate chain is {trustResult.ChainStatus}: {path}");
+                    logger.Warn($"Notice: Binary signature is valid but certificate chain is {trustResult.ChainStatus}: {safePath}");
                 }
 
-                logger.Info($"Located Tobii runtime candidate: {path} (Publisher: {trustResult.SignerSubject ?? "Unknown"}, Chain: {trustResult.ChainStatus})");
+                logger.Info($"Located compatible Tobii runtime candidate: {safePath} (Publisher: {trustResult.SignerSubject ?? "Unknown"}, Chain: {trustResult.ChainStatus})");
                 return new RuntimeLocatorResult(
                     isFound: true,
                     libraryPath: path,
                     isArchValid: true,
-                    isSigVerified: trustResult.SignerMatchesTobii,
+                    isSigVerified: true,
                     publisher: trustResult.SignerSubject,
                     failureReason: null,
                     trustResult: trustResult);

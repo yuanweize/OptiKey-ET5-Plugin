@@ -36,17 +36,11 @@ The same current product page states that Tobii Eye Tracker 5 without the `L` is
 
 ## Identity status
 
-The provider must not treat `deviceUrls[0]` as proof of ET5 identity. Since the safe device-info ABI is not yet proven, the production path currently fails closed after enumeration and before device creation. A documented identity mechanism and a supported API/license path must be established before hardware validation.
+The provider treats `deviceUrls[0]` not as definitive proof of ET5 model identity, but as a single compatible Tobii runtime candidate. When exactly ONE compatible Tobii candidate is enumerated and automatic device selection is enabled (default), the provider automatically binds to it to facilitate seamless assistive communication. When MULTIPLE candidates exist, automatic binding is strictly refused to prevent connecting to an unintended device. Establishing model-specific identification via a verified `tobii_get_device_info` ABI remains an ongoing research topic.
 
 ## Callback shutdown status
 
-The local declaration of `tobii_wait_for_callbacks` has no timeout or cancellation parameter. The authoritative public material retrieved during this audit did not establish whether it is interruptible, what operation wakes it, or whether cross-thread destroy/reconnect is supported. The current worker therefore waits for the worker thread before native destruction, which prevents use-after-free but does not provide a bounded shutdown guarantee. This is a P0 blocker.
-
-The next acceptable implementation must be based on an authoritative Tobii contract for one of:
-
-1. a documented wake/cancel operation;
-2. a documented non-blocking callback processing loop; or
-3. another documented lifecycle protocol that provides bounded shutdown without destroying a device while a native call is active.
+The production default uses `ProcessOnlyPollingPump` (periodic `tobii_device_process_callbacks` with interruptible wait handle) to provide managed bounded shutdown without relying on the blocking `tobii_wait_for_callbacks`. Managed cancellation and timeout containment are CI-verified, while native execution duration during active streaming remains subject to physical hardware evaluation.
 
 ## Current-source retrieval result
 

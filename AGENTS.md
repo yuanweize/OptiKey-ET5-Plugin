@@ -23,7 +23,7 @@
 14. **Update STATUS Bilingually**: Track milestone progress and readiness in both [`docs/project/STATUS.md`](docs/project/STATUS.md) and [`docs/project/STATUS.zh-CN.md`](docs/project/STATUS.zh-CN.md).
 15. **Bilingual Release Notes**: All GitHub Release summaries must provide complete English and Simplified Chinese sections.
 16. **No Silent Synthetic Fallbacks**: Production code must never silently fall back to mock or synthetic gaze if native hardware fails. Errors must be surfaced.
-17. **Do Not Hallucinate Native ABI**: Adhere strictly to verified native C declarations and documented signatures in `TobiiStreamEngineNative.cs` and [`docs/research/ABI_PROVENANCE.md`](docs/research/ABI_PROVENANCE.md).
+17. **Do Not Hallucinate Native ABI**: Adhere strictly to verified native C declarations and documented signatures in [`src/OptiKey.ET5.Plugin/Runtime/Interop/TobiiStreamEngineBinding.cs`](src/OptiKey.ET5.Plugin/Runtime/Interop/TobiiStreamEngineBinding.cs) and [`docs/research/ABI_PROVENANCE.md`](docs/research/ABI_PROVENANCE.md).
 18. **Respect Architectural Decisions**: Check existing Architecture Decision Records ([`docs/adr/`](docs/adr/)) before designing new components or creating new ADRs.
 19. **Atomic, Descriptive Commits**: Keep commits small, well-scoped, and formatted according to Conventional Commits (`feat:`, `fix:`, `docs:`, `ci:`).
 20. **Prune Obsolete Branches**: Delete merged feature branches both locally and remotely immediately after PR completion.

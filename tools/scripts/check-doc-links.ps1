@@ -4,7 +4,8 @@
 .DESCRIPTION
     Scans all Markdown files (excluding build artifacts, .git, and external dependencies)
     and verifies that every local relative link targets an existing file in the repository.
-    Ignores external URLs (http://, https://, mailto:), in-page anchors (#), and file:// URIs.
+    Ignores external URLs (http://, https://, mailto:) and in-page anchors (#).
+    STRICTLY FAILS on machine-local file:// URIs or machine-specific absolute filesystem paths.
     Ignores Markdown links located inside code fences (``` or ~~~).
 #>
 
@@ -48,13 +49,30 @@ foreach ($file in $mdFiles) {
             continue
         }
 
+        # Check for machine-local absolute path leakage outside code blocks
+        if ($line -match '(file:///|[a-zA-Z]:\\Users\\|/(?:Users|home)/[a-zA-Z0-9_\-]+/|\b[Dd]:\\a\\)') {
+            $errors += "$($relFile):$($lineNo) - Machine-local absolute filesystem path detected outside code fence: $line"
+        }
+
         $matches = $linkRegex.Matches($line)
         foreach ($match in $matches) {
             $target = $match.Groups['target'].Value.Trim()
             $text = $match.Groups['text'].Value.Trim()
 
+            # Reject machine-local file:// URIs (DOC-01)
+            if ($target -match '^file://') {
+                $errors += "$($relFile):$($lineNo) - Machine-local file:// URI prohibited in Markdown link: [$text]($target)"
+                continue
+            }
+
+            # Reject Windows/Unix machine-local absolute paths
+            if ($target -match '^[a-zA-Z]:[/\\]' -or $target -match '^/(Users|home|private|tmp|var|opt)/') {
+                $errors += "$($relFile):$($lineNo) - Machine-local absolute path prohibited in Markdown link: [$text]($target)"
+                continue
+            }
+
             # Ignore external protocols, mailto, and in-page anchor links
-            if ($target -match '^(https?://|mailto:|#|file://)') {
+            if ($target -match '^(https?://|mailto:|#)') {
                 continue
             }
 
