@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Verify Documentation Synchronization & Links
         if: matrix.contracts_target == 'pinned-stable'
@@ -34,13 +34,13 @@ jobs:
           .\tools\scripts\test-doc-checkers.ps1
 
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@v3
 
       - name: Setup NuGet
-        uses: NuGet/setup-nuget@v2
+        uses: NuGet/setup-nuget@v4
 
       - name: Setup VSTest
-        uses: darenm/Setup-VSTest@v1.2
+        uses: darenm/Setup-VSTest@v1.3
 
       - name: Determine Upstream Contracts Reference
         id: contracts-ref
@@ -76,7 +76,7 @@ jobs:
           .\tools\scripts\run-tests.ps1
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: OptiKey-ET5-Plugin-TestResults-${{ matrix.contracts_target }}
           path: |
@@ -100,7 +100,7 @@ jobs:
 
       - name: Upload Release Artifacts
         if: always() && matrix.contracts_target == 'pinned-stable'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: OptiKey-ET5-Plugin-Package
           path: |
