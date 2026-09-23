@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Verify Documentation Synchronization & Links
         shell: pwsh
@@ -35,13 +35,13 @@ jobs:
           .\tools\scripts\check-doc-links.ps1
 
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@v3
 
       - name: Setup NuGet
-        uses: NuGet/setup-nuget@v2
+        uses: NuGet/setup-nuget@v4
 
       - name: Setup VSTest
-        uses: darenm/Setup-VSTest@v1.2
+        uses: darenm/Setup-VSTest@v1.3
 
       - name: Determine Effective Release Tag
         id: tag_info
@@ -90,7 +90,7 @@ jobs:
 
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: OptiKey-ET5-Plugin-Release-TestResults
           path: |
@@ -129,7 +129,7 @@ jobs:
 
       - name: Upload Upstream-Main Test Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: OptiKey-ET5-Plugin-Release-TestResults-upstream-main
           path: |
@@ -172,7 +172,7 @@ jobs:
 
       - name: Create GitHub Release
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run)
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag_info.outputs.tag }}
           name: "OptiKey-ET5-Plugin ${{ steps.tag_info.outputs.tag }}"
