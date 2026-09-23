@@ -23,4 +23,4 @@ To protect vulnerable assistive technology users and maintain high host applicat
 If you discover a security vulnerability or code-execution vector:
 1. Do **NOT** disclose the issue in public GitHub issues or discussions.
 2. Send a confidential report detailing reproduction steps to: `yuanweize@users.noreply.github.com`.
-3. We will acknowledge receipt within 48 hours and coordinate a private patch prior to public disclosure.
+3. I aim to acknowledge valid security reports as soon as practical, investigate the root cause, and coordinate a patch.
